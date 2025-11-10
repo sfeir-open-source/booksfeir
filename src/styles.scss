@@ -1,0 +1,123 @@
+@use '@angular/material' as mat;
+@use './sfeir-theme-colors' as sfeir-theme; // location of generated file
+
+/* ===============================================
+   🌈 Bibliothèque Numérique — Thème clair M3
+   Compatible Angular Material 20.2.12
+   =============================================== */
+
+/* 1️⃣ Styles de base Angular Material */
+@include mat.core();
+
+/* 2️⃣ Créer le thème avec l’API Material 3 */
+$library-theme: mat.define-theme((
+  color: (
+    theme-type: light, // Thème clair
+    primary: sfeir-theme.$primary-palette,
+    tertiary: sfeir-theme.$tertiary-palette
+  ),
+  typography: (
+    brand-family: 'Poppins, sans-serif',
+    plain-family: 'Inter, sans-serif',
+    bold-weight: 600,
+    medium-weight: 500,
+    regular-weight: 400
+  ),
+  density: (
+    scale: 0
+  )
+));
+
+/* 3️⃣ Appliquer le thème à tous les composants Material */
+@include mat.all-component-themes($library-theme);
+
+/* 4️⃣ Définir quelques variables globales custom */
+:root {
+  --color-primary: #0073E6;
+  --color-secondary: #00BFA6;
+  --color-bg: #F5F7FA;
+  --color-text: #0B0B0B;
+  --gradient-accent: linear-gradient(135deg, #0073E6, #00BFA6);
+}
+
+/* 5️⃣ Styles globaux */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+/* Titres */
+h1, h2, h3 {
+  font-family: 'Poppins', sans-serif;
+  color: var(--color-text);
+  letter-spacing: -0.25px;
+  margin: 0 0 0.5em 0;
+}
+
+h1 {
+  font-weight: 600;
+  font-size: 2.25rem;
+}
+
+h2 {
+  font-weight: 500;
+  font-size: 1.75rem;
+}
+
+/* 6️⃣ Boutons */
+.mat-mdc-raised-button {
+  border-radius: 16px;
+  font-weight: 500;
+  background: var(--gradient-accent);
+  color: white;
+  text-transform: none;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 115, 230, 0.3);
+    transform: translateY(-2px);
+  }
+}
+
+/* 7️⃣ Cartes */
+.mat-mdc-card {
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* 8️⃣ Toolbar */
+.mat-toolbar {
+  background: var(--gradient-accent);
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+}
+
+/* 9️⃣ Champs de texte */
+.mat-mdc-form-field {
+  .mat-mdc-form-field-flex {
+    border-radius: 12px;
+    background-color: #F5F7FA;
+    transition: all 0.2s ease;
+  }
+
+  &.mat-focused .mat-mdc-form-field-flex {
+    background-color: white;
+    box-shadow: 0 0 0 2px rgba(0, 191, 166, 0.25);
+  }
+}
+
+/* 🔟Animation douce globale */
+* {
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
