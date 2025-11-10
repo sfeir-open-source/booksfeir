@@ -2,6 +2,11 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.5.
 
+Each feature was developed using [spec kit](https://github.com/github/spec-kit) version 0.0.79.
+
+## IA assistant 
+  Using claude code and context7 MCP.
+
 ## Development server
 
 To start a local development server, run:
