@@ -1,0 +1,174 @@
+<div class="book-form-container">
+  <div class="back-button-container">
+    <button mat-button (click)="onCancel()">
+      <mat-icon>arrow_back</mat-icon>
+      Cancel
+    </button>
+  </div>
+
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title>
+        <h1>{{ isEditMode() ? 'Edit Book' : 'Add New Book' }}</h1>
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (isLoading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="50"></mat-spinner>
+          <p>Loading book...</p>
+        </div>
+      } @else {
+        @if (error(); as errorMessage) {
+          <div class="error-message">
+            <mat-icon>error</mat-icon>
+            <span>{{ errorMessage }}</span>
+          </div>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="book-form">
+          <!-- Library Selection (disabled in edit mode) -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Library</mat-label>
+            <mat-select formControlName="libraryId" required>
+              @for (library of libraries(); track library.id) {
+                <mat-option [value]="library.id">{{ library.name }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matPrefix>library_books</mat-icon>
+            @if (hasError('libraryId')) {
+              <mat-error>{{ getErrorMessage('libraryId') }}</mat-error>
+            }
+            @if (isEditMode()) {
+              <mat-hint>Library cannot be changed when editing a book</mat-hint>
+            }
+          </mat-form-field>
+
+          <!-- Title -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Title</mat-label>
+            <input
+              matInput
+              formControlName="title"
+              placeholder="e.g., Clean Code"
+              required
+              maxlength="500"
+            />
+            <mat-icon matPrefix>menu_book</mat-icon>
+            @if (hasError('title')) {
+              <mat-error>{{ getErrorMessage('title') }}</mat-error>
+            }
+            <mat-hint align="end">{{ form.get('title')?.value?.length || 0 }}/500</mat-hint>
+          </mat-form-field>
+
+          <!-- Author -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Author</mat-label>
+            <input
+              matInput
+              formControlName="author"
+              placeholder="e.g., Robert C. Martin"
+              required
+              maxlength="200"
+            />
+            <mat-icon matPrefix>person</mat-icon>
+            @if (hasError('author')) {
+              <mat-error>{{ getErrorMessage('author') }}</mat-error>
+            }
+            <mat-hint align="end">{{ form.get('author')?.value?.length || 0 }}/200</mat-hint>
+          </mat-form-field>
+
+          <!-- Edition -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Edition (Optional)</mat-label>
+            <input
+              matInput
+              formControlName="edition"
+              placeholder="e.g., 1st Edition"
+              maxlength="100"
+            />
+            <mat-icon matPrefix>edit_note</mat-icon>
+            @if (hasError('edition')) {
+              <mat-error>{{ getErrorMessage('edition') }}</mat-error>
+            }
+            <mat-hint align="end">{{ form.get('edition')?.value?.length || 0 }}/100</mat-hint>
+          </mat-form-field>
+
+          <!-- Publication Date -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Publication Date (Optional)</mat-label>
+            <input
+              matInput
+              formControlName="publicationDate"
+              placeholder="e.g., 2008 or 2008-01-15"
+              maxlength="50"
+            />
+            <mat-icon matPrefix>calendar_today</mat-icon>
+            @if (hasError('publicationDate')) {
+              <mat-error>{{ getErrorMessage('publicationDate') }}</mat-error>
+            }
+            <mat-hint align="end">{{ form.get('publicationDate')?.value?.length || 0 }}/50</mat-hint>
+          </mat-form-field>
+
+          <!-- ISBN -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>ISBN (Optional)</mat-label>
+            <input
+              matInput
+              formControlName="isbn"
+              placeholder="e.g., 978-0132350884"
+              maxlength="20"
+            />
+            <mat-icon matPrefix>tag</mat-icon>
+            @if (hasError('isbn')) {
+              <mat-error>{{ getErrorMessage('isbn') }}</mat-error>
+            }
+            <mat-hint align="end">{{ form.get('isbn')?.value?.length || 0 }}/20</mat-hint>
+          </mat-form-field>
+
+          <!-- Cover Image URL -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Cover Image URL (Optional)</mat-label>
+            <input
+              matInput
+              formControlName="coverImage"
+              placeholder="https://example.com/cover.jpg"
+              maxlength="2000"
+            />
+            <mat-icon matPrefix>image</mat-icon>
+            @if (hasError('coverImage')) {
+              <mat-error>{{ getErrorMessage('coverImage') }}</mat-error>
+            }
+            <mat-hint>Enter a URL to an image or leave blank for default placeholder</mat-hint>
+          </mat-form-field>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button
+              mat-button
+              type="button"
+              (click)="onCancel()"
+              [disabled]="isSaving()"
+            >
+              Cancel
+            </button>
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="form.invalid || isSaving()"
+            >
+              @if (isSaving()) {
+                <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+                <span>Saving...</span>
+              } @else {
+                <span>{{ isEditMode() ? 'Update Book' : 'Add Book' }}</span>
+              }
+            </button>
+          </div>
+        </form>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

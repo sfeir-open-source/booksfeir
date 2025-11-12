@@ -1,0 +1,158 @@
+<div class="book-search-container">
+  <mat-card class="search-card">
+    <mat-card-header>
+      <mat-card-title>
+        <h1>Search Books</h1>
+      </mat-card-title>
+      <mat-card-subtitle>
+        Search the Google Books catalog and request books for purchase
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (error(); as errorMessage) {
+        <div class="error-message">
+          <mat-icon>error</mat-icon>
+          <span>{{ errorMessage }}</span>
+        </div>
+      }
+
+      <form [formGroup]="searchForm" (ngSubmit)="onSearch()" class="search-form">
+        <!-- Library Selection -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Target Library</mat-label>
+          <mat-select formControlName="libraryId" required>
+            @for (library of libraries(); track library.id) {
+              <mat-option [value]="library.id">{{ library.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>library_books</mat-icon>
+          @if (hasError('libraryId')) {
+            <mat-error>{{ getErrorMessage('libraryId') }}</mat-error>
+          }
+          <mat-hint>Select the library where you want this book</mat-hint>
+        </mat-form-field>
+
+        <!-- Search Query -->
+        <div class="search-input-row">
+          <mat-form-field appearance="outline" class="search-input">
+            <mat-label>Search Query</mat-label>
+            <input
+              matInput
+              formControlName="query"
+              placeholder="Enter title, author, ISBN..."
+              (keyup.enter)="onSearch()"
+            />
+            <mat-icon matPrefix>search</mat-icon>
+            @if (hasError('query')) {
+              <mat-error>{{ getErrorMessage('query') }}</mat-error>
+            }
+          </mat-form-field>
+
+          <button
+            mat-raised-button
+            color="primary"
+            type="submit"
+            [disabled]="searchForm.invalid || isSearching()"
+            class="search-button"
+          >
+            @if (isSearching()) {
+              <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+              <span>Searching...</span>
+            } @else {
+              <ng-container>
+                <mat-icon>search</mat-icon>
+              </ng-container>
+              <span>Search</span>
+            }
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Search Results -->
+  @if (searchPerformed()) {
+    <div class="results-section">
+      <div class="results-header">
+        <h2>Search Results</h2>
+        <span class="results-count">{{ searchResults().length }} books found</span>
+      </div>
+
+      @if (searchResults().length > 0) {
+        <div class="results-grid">
+          @for (book of searchResults(); track trackByGoogleBooksId($index, book)) {
+            <mat-card class="book-result-card">
+              <div class="book-result-content">
+                <!-- Cover Image -->
+                <div class="book-cover">
+                  @if (book.coverImage) {
+                    <img [src]="book.coverImage" [alt]="book.title" class="cover-image" />
+                  } @else {
+                    <div class="cover-placeholder">
+                      <mat-icon>menu_book</mat-icon>
+                    </div>
+                  }
+                </div>
+
+                <!-- Book Info -->
+                <div class="book-info">
+                  <h3 class="book-title">{{ book.title }}</h3>
+                  <p class="book-author">by {{ book.author }}</p>
+
+                  @if (book.publisher || book.publicationDate) {
+                    <div class="book-metadata">
+                      @if (book.publisher) {
+                        <span class="metadata-item">{{ book.publisher }}</span>
+                      }
+                      @if (book.publicationDate) {
+                        <span class="metadata-item">{{ book.publicationDate }}</span>
+                      }
+                    </div>
+                  }
+
+                  @if (book.isbn) {
+                    <mat-chip class="isbn-chip">
+                      ISBN: {{ book.isbn }}
+                    </mat-chip>
+                  }
+
+                  @if (book.description) {
+                    <p class="book-description">{{ book.description }}</p>
+                  }
+                </div>
+              </div>
+
+              <!-- Action Button -->
+              <mat-card-actions align="end">
+                <button
+                  mat-raised-button
+                  color="primary"
+                  (click)="onRequestPurchase(book)"
+                  [disabled]="isSubmitting() === book.googleBooksId"
+                >
+                  @if (isSubmitting() === book.googleBooksId) {
+                    <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+                    <span>Requesting...</span>
+                  } @else {
+                    <ng-container>
+                      <mat-icon>add_shopping_cart</mat-icon>
+                    </ng-container>
+                    <span>Request Purchase</span>
+                  }
+                </button>
+              </mat-card-actions>
+            </mat-card>
+          }
+        </div>
+      } @else {
+        <!-- Empty State -->
+        <div class="empty-state">
+          <mat-icon class="empty-icon">search_off</mat-icon>
+          <h3>No Results Found</h3>
+          <p>Try adjusting your search query or using different keywords.</p>
+        </div>
+      }
+    </div>
+  }
+</div>

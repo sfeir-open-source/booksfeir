@@ -1,0 +1,204 @@
+<div class="library-detail-container">
+  <!-- Back Button -->
+  <div class="back-button-container">
+    <button mat-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Libraries
+    </button>
+  </div>
+
+  <!-- Loading Indicator -->
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading library...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (error()) {
+    <div class="error-state">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <h2>{{ error() }}</h2>
+      <button mat-raised-button color="primary" (click)="goBack()">
+        Return to Homepage
+      </button>
+    </div>
+  }
+
+  <!-- Library Content -->
+  @else if (library(); as lib) {
+    <!-- Library Header -->
+    <mat-card class="library-header">
+      <mat-card-header>
+        <mat-card-title>
+          <h1>{{ lib.name }}</h1>
+        </mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        @if (lib.description) {
+          <p class="library-description">{{ lib.description }}</p>
+        }
+
+        @if (lib.location) {
+          <div class="library-location">
+            <mat-icon>location_on</mat-icon>
+            <span>{{ lib.location }}</span>
+          </div>
+        }
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-button (click)="onEdit()" [disabled]="isDeleting()">
+          <mat-icon>edit</mat-icon>
+          Edit
+        </button>
+        <button mat-button color="warn" (click)="onDelete()" [disabled]="isDeleting()">
+          @if (isDeleting()) {
+            <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+            <span>Deleting...</span>
+          } @else {
+            <ng-container>
+              <mat-icon>delete</mat-icon>
+              <span>Delete</span>
+            </ng-container>
+          }
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Books Section -->
+    <div class="books-section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Books</h2>
+          <span class="book-count">{{ books().length }} {{ books().length === 1 ? 'book' : 'books' }}</span>
+        </div>
+        <button mat-raised-button color="primary" (click)="onAddBook()">
+          <mat-icon>add</mat-icon>
+          Add Book
+        </button>
+      </div>
+
+      @if (books().length > 0) {
+        <mat-list class="books-list">
+          @for (book of books(); track trackByBookId($index, book)) {
+            <mat-list-item class="book-item">
+              <div class="book-content">
+                <!-- Book Cover -->
+                <div class="book-cover">
+                  @if (book.coverImage) {
+                    <img [src]="book.coverImage" [alt]="book.title" class="cover-image" />
+                  } @else {
+                    <div class="cover-placeholder">
+                      <mat-icon>menu_book</mat-icon>
+                    </div>
+                  }
+                </div>
+
+                <!-- Book Info -->
+                <div class="book-info">
+                  <h3 class="book-title">{{ book.title }}</h3>
+                  <p class="book-author">by {{ book.author }}</p>
+
+                  <div class="book-metadata">
+                    @if (book.edition) {
+                      <span class="metadata-item">{{ book.edition }}</span>
+                    }
+                    @if (book.publicationDate) {
+                      <span class="metadata-item">{{ book.publicationDate }}</span>
+                    }
+                    @if (book.isbn) {
+                      <span class="metadata-item">ISBN: {{ book.isbn }}</span>
+                    }
+                  </div>
+
+                  <mat-chip [color]="getStatusColor(book.status)" highlighted>
+                    {{ getStatusDisplay(book.status) }}
+                  </mat-chip>
+                </div>
+
+                <!-- Book Actions -->
+                <div class="book-actions">
+                  <!-- Borrow/Return Button -->
+                  @if (canBorrowBook(book)) {
+                    <button
+                      mat-raised-button
+                      color="primary"
+                      (click)="onBorrowBook(book)"
+                      [disabled]="isBorrowingBook() === book.id"
+                      class="action-button"
+                    >
+                      @if (isBorrowingBook() === book.id) {
+                        <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+                        <span>Borrowing...</span>
+                      } @else {
+                        <ng-container>
+                          <mat-icon>book</mat-icon>
+                        </ng-container>
+                        <span>Borrow</span>
+                      }
+                    </button>
+                  } @else if (hasUserBorrowedBook(book)) {
+                    <button
+                      mat-raised-button
+                      color="accent"
+                      (click)="onReturnBook(book)"
+                      [disabled]="isReturningBook() === book.id"
+                      class="action-button"
+                    >
+                      @if (isReturningBook() === book.id) {
+                        <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+                        <span>Returning...</span>
+                      } @else {
+                        <ng-container>
+                          <mat-icon>assignment_return</mat-icon>
+                        </ng-container>
+                        <span>Return</span>
+                      }
+                    </button>
+                  }
+
+                  <!-- Edit/Delete Buttons -->
+                  <button
+                    mat-icon-button
+                    (click)="onEditBook(book)"
+                    [disabled]="isDeletingBook() === book.id"
+                    matTooltip="Edit book"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    (click)="onDeleteBook(book)"
+                    [disabled]="isDeletingBook() === book.id"
+                    matTooltip="Delete book"
+                  >
+                    @if (isDeletingBook() === book.id) {
+                      <mat-spinner diameter="24"></mat-spinner>
+                    } @else {
+                      <mat-icon>delete</mat-icon>
+                    }
+                  </button>
+                </div>
+              </div>
+            </mat-list-item>
+          }
+        </mat-list>
+      } @else {
+        <!-- Empty State for Books -->
+        <div class="empty-state">
+          <mat-icon class="empty-icon">menu_book</mat-icon>
+          <h3>No Books Yet</h3>
+          <p>This library doesn't have any books. Add books to get started.</p>
+          <button mat-raised-button color="primary" (click)="onAddBook()">
+            <mat-icon>add</mat-icon>
+            Add Your First Book
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>
