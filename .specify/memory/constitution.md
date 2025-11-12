@@ -1,14 +1,15 @@
 <!--
 Sync Impact Report:
-- Version change: N/A → 1.0.0
-- New constitution created from template
-- Modified principles: All principles newly defined
-- Added sections: All sections
+- Version change: 1.3.0 → 1.3.1
+- Modified principles: None
+- Added sections:
+  - Technology Constraints expanded with External APIs (Google Books API v1)
 - Removed sections: None
 - Templates requiring updates:
-  ✅ plan-template.md - reviewed and aligned
-  ✅ spec-template.md - reviewed and aligned
-  ✅ tasks-template.md - reviewed and aligned
+  ✅ plan-template.md - reviewed, no updates needed (constitution check is flexible)
+  ✅ spec-template.md - reviewed, no updates needed (technology-agnostic by design)
+  ✅ tasks-template.md - reviewed, no updates needed (implementation-focused)
+  ✅ .claude/commands/speckit.*.md - reviewed, no agent-specific references (generic guidance maintained)
 - Follow-up TODOs: None
 -->
 
@@ -27,7 +28,7 @@ All code MUST adhere to clean code principles:
 
 **Rationale**: Clean code ensures long-term maintainability, reduces technical debt, and makes the codebase accessible to all team members. It minimizes bugs and accelerates feature development.
 
-### II. Modern Angular Architecture
+### II. Modern Angular Architecture (NON-NEGOTIABLE)
 
 All Angular code MUST follow modern best practices:
 - Standalone components only (NO NgModules except for compatibility requirements)
@@ -38,8 +39,9 @@ All Angular code MUST follow modern best practices:
 - Native control flow (`@if`, `@for`, `@switch`) instead of structural directives
 - Host bindings in the `host` object instead of `@HostBinding`/`@HostListener` decorators
 - Lazy loading for all feature routes
+- **Zoneless operation**: Application MUST run without zone.js (use `provideExperimentalZonelessChangeDetection()`)
 
-**Rationale**: Modern Angular patterns improve performance, reduce boilerplate, provide better type safety, and align with the framework's evolution. Signals offer superior reactivity and simpler state management compared to traditional approaches.
+**Rationale**: Modern Angular patterns improve performance, reduce boilerplate, provide better type safety, and align with the framework's evolution. Signals offer superior reactivity and simpler state management compared to traditional approaches. Running without zone.js eliminates overhead, improves performance, and aligns with Angular's future direction.
 
 ### III. TypeScript Strict Mode (NON-NEGOTIABLE)
 
@@ -63,7 +65,7 @@ All UI components MUST:
 
 **Rationale**: Angular Material provides battle-tested, accessible components that ensure consistency and reduce development time. Material Design creates a cohesive, professional user experience.
 
-### V. Comprehensive Testing with Jest (NON-NEGOTIABLE)
+### V. Comprehensive Testing (NON-NEGOTIABLE)
 
 All code MUST be tested:
 - Unit tests for all components, services, and utilities (minimum 80% coverage)
@@ -71,10 +73,11 @@ All code MUST be tested:
 - Component tests using Angular Testing Library patterns and component harnesses
 - Test-Driven Development (TDD) recommended: write tests before implementation when feasible
 - Tests MUST be readable, maintainable, and fast (<5s per test suite)
-- Use `jest-preset-angular` for optimal Angular + Jest integration
+- Use Karma test runner with Jasmine testing framework
 - Mock external dependencies appropriately
+- Leverage Angular Testing utilities (`TestBed`, component harnesses, fixtures)
 
-**Rationale**: Comprehensive testing prevents regressions, documents expected behavior, enables confident refactoring, and reduces production bugs. Jest provides fast, reliable testing with excellent developer experience.
+**Rationale**: Comprehensive testing prevents regressions, documents expected behavior, enables confident refactoring, and reduces production bugs. Karma with Jasmine provides Angular-native testing integration with robust browser-based test execution.
 
 ### VI. Simple and Intuitive UX/UI
 
@@ -86,6 +89,34 @@ All user interfaces MUST:
 - Ensure error messages are helpful and actionable
 
 **Rationale**: Simple UX reduces training time, improves user satisfaction, and decreases support burden. Users can accomplish tasks faster with fewer errors.
+
+### VII. Context7 Documentation Integration
+
+All development workflows MUST:
+- Use Context7 MCP tools for code generation, setup, and configuration steps
+- Automatically resolve library IDs using `mcp__context7__resolve-library-id` when documentation is needed
+- Retrieve up-to-date library documentation using `mcp__context7__get-library-docs` for API references
+- Consult Context7 documentation before implementing unfamiliar patterns or libraries
+- Prioritize Context7-sourced documentation over manual web searches for supported libraries
+
+**Rationale**: Context7 provides consistent, up-to-date, and contextually relevant documentation directly in the development workflow. This reduces context switching, ensures accuracy, and accelerates implementation by providing trusted code examples and API references at the point of need.
+
+### VIII. Mock-First Development for External Services
+
+All external service integrations MUST:
+- Implement mock/stub services for local development before production implementations
+- Create service interfaces that abstract external dependencies (GCP services, third-party APIs)
+- Use dependency injection to swap between mock and real implementations
+- Ensure application functionality can be fully developed and tested without live external services
+- Document mock service behavior and limitations clearly
+- Design mocks to match production service contracts and error scenarios
+
+**External Service Coverage**:
+- GCP Datastore (database operations)
+- GCP Identity Federation (authentication)
+- Google Books API v1 (book search with query format: `q="{terms}"+subject:Computers`)
+
+**Rationale**: Mock-first development enables rapid local development without cloud dependencies, reduces development costs, allows offline work, and ensures testability. Service abstraction prevents vendor lock-in and facilitates testing edge cases and error conditions that are difficult to reproduce with live services.
 
 ## Development Workflow
 
@@ -117,6 +148,16 @@ All tests MUST:
 - Use component harnesses for Angular Material components
 - Avoid implementation details (test behavior, not internals)
 
+### Mocking Standards
+
+All external service mocks MUST:
+- Implement the same TypeScript interfaces as production services
+- Provide realistic data and response delays
+- Support common error scenarios (network failures, authentication errors, rate limiting)
+- Be configurable for different test scenarios
+- Document differences from production behavior
+- Be maintained alongside production implementations to prevent drift
+
 ## Technology Constraints
 
 ### Required Stack
@@ -124,21 +165,28 @@ All tests MUST:
 The project MUST use:
 - **Framework**: Angular 20.x with standalone components
 - **UI Library**: Angular Material 20.x
-- **Testing**: Jest with `jest-preset-angular`
+- **Testing**: Karma test runner with Jasmine framework
 - **Language**: TypeScript 5.9.x with strict mode
 - **State Management**: Angular Signals (no external state libraries unless justified)
 - **Build Tool**: Angular CLI
+- **Change Detection**: Zoneless (`provideExperimentalZonelessChangeDetection()`)
+- **Documentation Tool**: Context7 MCP for library documentation and code generation
+- **Database**: GCP Datastore (NoSQL managed database, mocked for local development)
+- **Authentication**: GCP Identity Federation (federated identity provider, mocked for local development)
+- **External APIs**: Google Books API v1 (`https://www.googleapis.com/books/v1/volumes`) for book search functionality
 
 ### Prohibited Patterns
 
 The following are PROHIBITED unless explicitly justified in the implementation plan:
 - NgModules (except for backwards compatibility requirements)
-- Zone.js-dependent patterns (prefer zoneless where possible)
+- **Zone.js usage**: Application MUST operate without zone.js (NON-NEGOTIABLE)
+- Zone.js-dependent patterns (e.g., relying on automatic change detection triggers)
 - `any` type in TypeScript
 - Structural directives (`*ngIf`, `*ngFor`, `*ngSwitch`)
 - Decorator-based inputs/outputs (`@Input`, `@Output`)
 - Template-driven forms (use Reactive Forms)
 - `ngClass` and `ngStyle` (use binding syntax)
+- Constructor-based dependency injection (use `inject()` function)
 
 ## Governance
 
@@ -172,5 +220,6 @@ For implementation-specific guidance, refer to:
 - `.claude/CLAUDE.md` - AI assistant development guidelines
 - `README.md` - Project setup and development instructions
 - Angular and Angular Material official documentation
+- Context7 MCP for up-to-date library documentation
 
-**Version**: 1.0.0 | **Ratified**: 2025-11-10 | **Last Amended**: 2025-11-10
+**Version**: 1.3.1 | **Ratified**: 2025-11-10 | **Last Amended**: 2025-11-12
