@@ -225,7 +225,7 @@ Potential improvements for future versions:
 
 ## 📄 License
 
-[Add your license information here]
+[Apache Licence](./LICENSE)
 
 ## 🤝 Contributing
 
