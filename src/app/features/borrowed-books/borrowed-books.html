@@ -1,0 +1,130 @@
+<div class="borrowed-books-container">
+  <!-- Back Button -->
+  <div class="back-button-container">
+    <button mat-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Libraries
+    </button>
+  </div>
+
+  <!-- Page Header -->
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>
+        <h1>My Borrowed Books</h1>
+      </mat-card-title>
+      <mat-card-subtitle>
+        Manage and return your borrowed books
+      </mat-card-subtitle>
+    </mat-card-header>
+  </mat-card>
+
+  <!-- Loading Indicator -->
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading borrowed books...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (error()) {
+    <div class="error-state">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <h2>{{ error() }}</h2>
+      <button mat-raised-button color="primary" (click)="goBack()">
+        Return to Homepage
+      </button>
+    </div>
+  }
+
+  <!-- Borrowed Books List -->
+  @else {
+    @if (borrowedBooks().length > 0) {
+      <div class="books-section">
+        <div class="section-header">
+          <h2>Currently Borrowed</h2>
+          <span class="book-count">{{ borrowedBooks().length }} {{ borrowedBooks().length === 1 ? 'book' : 'books' }}</span>
+        </div>
+
+        <mat-list class="books-list">
+          @for (transaction of borrowedBooks(); track trackByTransactionId($index, transaction)) {
+            <mat-list-item class="book-item">
+              <div class="book-content">
+                <!-- Book Cover -->
+                <div class="book-cover">
+                  @if (transaction.bookCoverImage) {
+                    <img [src]="transaction.bookCoverImage" [alt]="transaction.bookTitle" class="cover-image" />
+                  } @else {
+                    <div class="cover-placeholder">
+                      <mat-icon>menu_book</mat-icon>
+                    </div>
+                  }
+                </div>
+
+                <!-- Book Info -->
+                <div class="book-info">
+                  <h3 class="book-title">{{ transaction.bookTitle }}</h3>
+                  <p class="book-author">by {{ transaction.bookAuthor }}</p>
+
+                  <div class="book-metadata">
+                    <span class="metadata-item">
+                      <mat-icon>library_books</mat-icon>
+                      {{ transaction.libraryName }}
+                    </span>
+                    <span class="metadata-item">
+                      <mat-icon>event</mat-icon>
+                      Borrowed: {{ formatDate(transaction.borrowedAt) }}
+                    </span>
+                    @if (transaction.dueDate) {
+                      <span class="metadata-item">
+                        <mat-icon>schedule</mat-icon>
+                        Due: {{ formatDate(transaction.dueDate) }}
+                      </span>
+                    }
+                  </div>
+
+                  <mat-chip [color]="getStatusColor(transaction)" highlighted>
+                    {{ getStatusText(transaction) }}
+                  </mat-chip>
+                </div>
+
+                <!-- Return Button -->
+                <div class="book-actions">
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    (click)="onReturnBook(transaction)"
+                    [disabled]="isReturningBook() === transaction.id"
+                    class="return-button"
+                  >
+                    @if (isReturningBook() === transaction.id) {
+                      <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+                      <span>Returning...</span>
+                    } @else {
+                      <ng-container>
+                        <mat-icon>assignment_return</mat-icon>
+                      </ng-container>
+                      <span>Return Book</span>
+                    }
+                  </button>
+                </div>
+              </div>
+            </mat-list-item>
+          }
+        </mat-list>
+      </div>
+    } @else {
+      <!-- Empty State -->
+      <div class="empty-state">
+        <mat-icon class="empty-icon">menu_book</mat-icon>
+        <h3>No Borrowed Books</h3>
+        <p>You haven't borrowed any books yet. Browse libraries to find books to borrow.</p>
+        <button mat-raised-button color="primary" (click)="goBack()">
+          <mat-icon>home</mat-icon>
+          Browse Libraries
+        </button>
+      </div>
+    }
+  }
+</div>
