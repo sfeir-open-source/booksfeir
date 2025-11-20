@@ -1,17 +1,16 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter, Router } from '@angular/router';
-import { ActivatedRoute } from '@angular/router';
-import { ReactiveFormsModule } from '@angular/forms';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { BookFormComponent } from './book-form.component';
-import { BookService } from '../../core/services/book.service';
-import { LibraryService } from '../../core/services/library.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { Book, BookStatus } from '../../core/models/book.model';
-import { Library } from '../../core/models/library.model';
-import { User, UserRole } from '../../core/models/user.model';
-import { of, throwError } from 'rxjs';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {ActivatedRoute, provideRouter, Router} from '@angular/router';
+import {ReactiveFormsModule} from '@angular/forms';
+import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {BookFormComponent} from './book-form.component';
+import {BookService} from '../../core/services/book.service';
+import {LibraryService} from '../../core/services/library.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {Book, BookStatus} from '../../core/models/book.model';
+import {Library} from '../../core/models/library.model';
+import {User, UserRole} from '../../core/models/user.model';
+import {of, throwError} from 'rxjs';
 
 describe('BookFormComponent', () => {
   let component: BookFormComponent;
@@ -28,7 +27,8 @@ describe('BookFormComponent', () => {
     email: 'test@example.com',
     role: UserRole.USER,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    updatedBy: 'system'
   };
 
   const mockLibrary: Library = {

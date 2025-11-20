@@ -1,16 +1,18 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { BorrowService } from '../../core/services/borrow.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { BorrowTransactionWithDetails, BorrowStatus } from '../../core/models/borrow-transaction.model';
-import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/dialogs/confirm-dialog/confirm-dialog.component';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, signal} from '@angular/core';
+import {toObservable, toSignal} from '@angular/core/rxjs-interop';
+import {Router} from '@angular/router';
+import {MatCardModule} from '@angular/material/card';
+import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {MatListModule} from '@angular/material/list';
+import {MatChipsModule} from '@angular/material/chips';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {MatDialog, MatDialogModule} from '@angular/material/dialog';
+import {BorrowService} from '../../core/services/borrow.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {BorrowStatus, BorrowTransactionWithDetails} from '../../core/models/borrow-transaction.model';
+import {ConfirmDialogComponent, ConfirmDialogData} from '../shared/dialogs/confirm-dialog/confirm-dialog.component';
+import {catchError, combineLatest, filter, map, of, switchMap, tap} from 'rxjs';
 
 /**
  * BorrowedBooksComponent
@@ -40,43 +42,78 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/dialogs/con
   styleUrl: './borrowed-books.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class BorrowedBooksComponent implements OnInit {
+export class BorrowedBooksComponent {
   private router = inject(Router);
   private borrowService = inject(BorrowService);
   private authService = inject(AuthMockService);
   private dialog = inject(MatDialog);
 
-  // Signals for reactive state
-  borrowedBooks = signal<BorrowTransactionWithDetails[]>([]);
-  isLoading = signal(true);
+  // Reactive state with signals
+  private currentUser = this.authService.currentUser;
   isReturningBook = signal<string | null>(null); // Track which book is being returned
-  error = signal<string | null>(null);
+  private refreshTrigger = signal(0); // Trigger for manual refresh after mutations
+  private returnBookTrigger = signal<BorrowTransactionWithDetails | null>(null); // Trigger for return operation
 
-  ngOnInit(): void {
-    this.loadBorrowedBooks();
-  }
+  // Convert signals to observables at field level (injection context)
+  private currentUser$ = toObservable(this.currentUser);
+  private refreshTrigger$ = toObservable(this.refreshTrigger);
+  private returnBookTrigger$ = toObservable(this.returnBookTrigger);
 
-  private loadBorrowedBooks(): void {
-    const currentUser = this.authService.currentUser();
-    if (!currentUser) {
-      this.error.set('You must be logged in to view borrowed books');
-      this.isLoading.set(false);
-      return;
-    }
+  // Load borrowed books using toSignal with observable conversion
+  private allTransactions = toSignal(
+    combineLatest([this.currentUser$, this.refreshTrigger$]).pipe(
+      switchMap(([user, _]) => {
+        if (!user) {
+          return of({data: [], error: 'You must be logged in to view borrowed books'});
+        }
+        return this.borrowService.getUserBorrowsWithDetails(user.id).pipe(
+          map(transactions => ({data: transactions, error: null})),
+          catchError(() => of({data: [], error: 'Failed to load borrowed books'}))
+        );
+      })
+    ),
+    {initialValue: {data: [], error: null}}
+  );
 
-    this.isLoading.set(true);
-    this.error.set(null);
+  // Handle return book operation with signals
+  private returnResult = toSignal(
+    this.returnBookTrigger$.pipe(
+      filter(transaction => transaction !== null),
+      tap(transaction => this.isReturningBook.set(transaction!.id)),
+      switchMap(transaction =>
+        this.borrowService.returnBook(transaction!.id).pipe(
+          map(() => ({success: true, transaction: transaction!, error: null})),
+          catchError(() => of({success: false, transaction: transaction!, error: 'Failed to return book'}))
+        )
+      )
+    ),
+    {initialValue: {success: false, transaction: {} as BorrowTransactionWithDetails, error: null}}
+  );
 
-    this.borrowService.getUserBorrowsWithDetails(currentUser.id).subscribe({
-      next: (transactions) => {
-        // Filter only active borrows
-        const activeBooks = transactions.filter(t => t.status === BorrowStatus.ACTIVE);
-        this.borrowedBooks.set(activeBooks);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        this.error.set('Failed to load borrowed books');
-        this.isLoading.set(false);
+  // Computed signals for derived state
+  borrowedBooks = computed(() => {
+    const transactions = this.allTransactions()?.data || [];
+    return transactions.filter(t => t.status === BorrowStatus.ACTIVE);
+  });
+
+  error = computed(() => this.allTransactions()?.error || null);
+  isLoading = computed(() => !this.allTransactions());
+
+  constructor() {
+    // Effect to handle post-return actions
+    effect(() => {
+      const result = this.returnResult();
+      if (result?.success && result.transaction) {
+        // Trigger refresh to reload borrowed books
+        this.refreshTrigger.update(v => v + 1);
+        this.isReturningBook.set(null);
+        this.showReturnSuccessDialog(result.transaction);
+        // Reset trigger
+        this.returnBookTrigger.set(null);
+      } else if (result?.error) {
+        this.isReturningBook.set(null);
+        // Reset trigger
+        this.returnBookTrigger.set(null);
       }
     });
   }
@@ -96,7 +133,7 @@ export class BorrowedBooksComponent implements OnInit {
   }
 
   /**
-   * Show return confirmation dialog
+   * Show return confirmation dialog and handle result with signals
    */
   private showReturnConfirmDialog(transaction: BorrowTransactionWithDetails): void {
     const dialogData: ConfirmDialogData = {
@@ -111,33 +148,19 @@ export class BorrowedBooksComponent implements OnInit {
       data: dialogData
     });
 
-    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
-      if (confirmed) {
-        this.executeReturn(transaction);
-      }
-    });
-  }
+    // Convert dialog result to signal and handle with effect
+    const dialogResult = toSignal(dialogRef.afterClosed(), {initialValue: null});
 
-  /**
-   * Execute book return
-   */
-  private executeReturn(transaction: BorrowTransactionWithDetails): void {
-    this.isReturningBook.set(transaction.id);
-    this.error.set(null);
-
-    this.borrowService.returnBook(transaction.id).subscribe({
-      next: () => {
-        // Remove the returned book from the list
-        const updated = this.borrowedBooks().filter(b => b.id !== transaction.id);
-        this.borrowedBooks.set(updated);
-        this.isReturningBook.set(null);
-        this.showReturnSuccessDialog(transaction);
+    effect(
+      () => {
+        const confirmed = dialogResult();
+        if (confirmed === true) {
+          // Trigger the return operation
+          this.returnBookTrigger.set(transaction);
+        }
       },
-      error: (err) => {
-        this.error.set('Failed to return book');
-        this.isReturningBook.set(null);
-      }
-    });
+      {allowSignalWrites: true}
+    );
   }
 
   /**

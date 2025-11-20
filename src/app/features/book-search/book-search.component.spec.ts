@@ -1,16 +1,16 @@
-import { ComponentFixture, TestBed, flush, flushMicrotasks } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { BookSearchComponent } from './book-search.component';
-import { GoogleBooksService, GoogleBookResult } from '../../core/services/google-books.service';
-import { PurchaseRequestService } from '../../core/services/purchase-request.service';
-import { LibraryService } from '../../core/services/library.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { Library } from '../../core/models/library.model';
-import { User, UserRole } from '../../core/models/user.model';
-import { of, throwError } from 'rxjs';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {ReactiveFormsModule} from '@angular/forms';
+import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {MatDialog, MatDialogModule} from '@angular/material/dialog';
+import {BookSearchComponent} from './book-search.component';
+import {GoogleBookResult, GoogleBooksService} from '../../core/services/google-books.service';
+import {PurchaseRequestService} from '../../core/services/purchase-request.service';
+import {LibraryService} from '../../core/services/library.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {Library} from '../../core/models/library.model';
+import {User, UserRole} from '../../core/models/user.model';
+import {of, throwError} from 'rxjs';
 
 describe('BookSearchComponent', () => {
   let component: BookSearchComponent;
@@ -27,7 +27,8 @@ describe('BookSearchComponent', () => {
     email: 'test@example.com',
     role: UserRole.USER,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    updatedBy: 'system'
   };
 
   const mockLibraries: Library[] = [
@@ -333,7 +334,8 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
 
       component.onRequestPurchase(mockBookResults[0]);
@@ -370,7 +372,8 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
 
       const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
@@ -407,7 +410,8 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
 
       const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
@@ -434,7 +438,8 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
 
       const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
@@ -462,7 +467,8 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
 
       const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
@@ -510,7 +516,8 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
 
       component.onRequestPurchase(mockBookResults[0]);

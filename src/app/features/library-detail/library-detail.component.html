@@ -50,6 +50,7 @@
       </mat-card-content>
 
       <mat-card-actions align="end">
+        @if (rigthOfManage()) {
         <button mat-button (click)="onEdit()" [disabled]="isDeleting()">
           <mat-icon>edit</mat-icon>
           Edit
@@ -65,6 +66,7 @@
             </ng-container>
           }
         </button>
+        }
       </mat-card-actions>
     </mat-card>
 
@@ -75,10 +77,12 @@
           <h2>Books</h2>
           <span class="book-count">{{ books().length }} {{ books().length === 1 ? 'book' : 'books' }}</span>
         </div>
+        @if (rigthOfManage()) {
         <button mat-raised-button color="primary" (click)="onAddBook()">
           <mat-icon>add</mat-icon>
           Add Book
         </button>
+        }
       </div>
 
       @if (books().length > 0) {
@@ -159,29 +163,30 @@
                       }
                     </button>
                   }
-
+                  @if (rigthOfManage()) {
                   <!-- Edit/Delete Buttons -->
-                  <button
-                    mat-icon-button
-                    (click)="onEditBook(book)"
-                    [disabled]="isDeletingBook() === book.id"
-                    matTooltip="Edit book"
-                  >
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button
-                    mat-icon-button
-                    color="warn"
-                    (click)="onDeleteBook(book)"
-                    [disabled]="isDeletingBook() === book.id"
-                    matTooltip="Delete book"
-                  >
-                    @if (isDeletingBook() === book.id) {
-                      <mat-spinner diameter="24"></mat-spinner>
-                    } @else {
-                      <mat-icon>delete</mat-icon>
-                    }
-                  </button>
+                    <button
+                      mat-icon-button
+                      (click)="onEditBook(book)"
+                      [disabled]="isDeletingBook() === book.id"
+                      matTooltip="Edit book"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      (click)="onDeleteBook(book)"
+                      [disabled]="isDeletingBook() === book.id"
+                      matTooltip="Delete book"
+                    >
+                      @if (isDeletingBook() === book.id) {
+                        <mat-spinner diameter="24"></mat-spinner>
+                      } @else {
+                        <mat-icon>delete</mat-icon>
+                      }
+                    </button>
+                  }
                 </div>
               </div>
             </mat-list-item>
@@ -192,11 +197,13 @@
         <div class="empty-state">
           <mat-icon class="empty-icon">menu_book</mat-icon>
           <h3>No Books Yet</h3>
+        @if (rigthOfManage()) {
           <p>This library doesn't have any books. Add books to get started.</p>
           <button mat-raised-button color="primary" (click)="onAddBook()">
             <mat-icon>add</mat-icon>
             Add Your First Book
           </button>
+        }
         </div>
       }
     </div>

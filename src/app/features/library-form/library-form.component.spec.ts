@@ -1,15 +1,14 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter, Router } from '@angular/router';
-import { ActivatedRoute } from '@angular/router';
-import { ReactiveFormsModule } from '@angular/forms';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { LibraryFormComponent } from './library-form.component';
-import { LibraryService } from '../../core/services/library.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { Library } from '../../core/models/library.model';
-import { User, UserRole } from '../../core/models/user.model';
-import { of, throwError } from 'rxjs';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {ActivatedRoute, provideRouter, Router} from '@angular/router';
+import {ReactiveFormsModule} from '@angular/forms';
+import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {LibraryFormComponent} from './library-form.component';
+import {LibraryService} from '../../core/services/library.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {Library} from '../../core/models/library.model';
+import {User, UserRole} from '../../core/models/user.model';
+import {of, throwError} from 'rxjs';
 
 describe('LibraryFormComponent', () => {
   let component: LibraryFormComponent;
@@ -25,7 +24,8 @@ describe('LibraryFormComponent', () => {
     email: 'test@example.com',
     role: UserRole.USER,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    updatedBy: 'system'
   };
 
   const mockLibrary: Library = {

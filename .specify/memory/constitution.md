@@ -167,7 +167,7 @@ The project MUST use:
 - **UI Library**: Angular Material 20.x
 - **Testing**: Karma test runner with Jasmine framework
 - **Language**: TypeScript 5.9.x with strict mode
-- **State Management**: Angular Signals (no external state libraries unless justified)
+- **State Management**: Angular Signals (no external state libraries unless justified) and Rxjs
 - **Build Tool**: Angular CLI
 - **Change Detection**: Zoneless (`provideExperimentalZonelessChangeDetection()`)
 - **Documentation Tool**: Context7 MCP for library documentation and code generation
@@ -187,6 +187,8 @@ The following are PROHIBITED unless explicitly justified in the implementation p
 - Template-driven forms (use Reactive Forms)
 - `ngClass` and `ngStyle` (use binding syntax)
 - Constructor-based dependency injection (use `inject()` function)
+- Promise
+- OnInit implementation
 
 ## Governance
 

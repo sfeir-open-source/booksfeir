@@ -1,11 +1,11 @@
-import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { LibraryService } from './library.service';
-import { DatastoreMockService } from './mock/datastore-mock.service';
-import { AuthMockService } from './mock/auth-mock.service';
-import { Library } from '../models/library.model';
-import { Book, BookStatus } from '../models/book.model';
-import { of, throwError } from 'rxjs';
+import {TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {LibraryService} from './library.service';
+import {DatastoreMockService} from './mock/datastore-mock.service';
+import {AuthMockService} from './mock/auth-mock.service';
+import {Library} from '../models/library.model';
+import {Book, BookStatus} from '../models/book.model';
+import {of, throwError} from 'rxjs';
 
 describe('LibraryService', () => {
   let service: LibraryService;
@@ -105,7 +105,7 @@ describe('LibraryService', () => {
 
   describe('getById', () => {
     it('should retrieve a library by ID', (done) => {
-      datastoreMock.read.and.returnValue(of(mockLibrary));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(mockLibrary));
 
       service.getById('lib-1').subscribe(library => {
         expect(library).toEqual(mockLibrary);
@@ -115,7 +115,7 @@ describe('LibraryService', () => {
     });
 
     it('should return null when library not found', (done) => {
-      datastoreMock.read.and.returnValue(of(null));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(null));
 
       service.getById('non-existent').subscribe(library => {
         expect(library).toBeNull();
@@ -124,7 +124,7 @@ describe('LibraryService', () => {
     });
 
     it('should return null on error', (done) => {
-      datastoreMock.read.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.getById('lib-1').subscribe(library => {
         expect(library).toBeNull();
@@ -141,7 +141,7 @@ describe('LibraryService', () => {
         location: 'New Location'
       };
 
-      datastoreMock.create.and.returnValue(of({
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of({
         ...formValue,
         id: 'new-lib',
         createdAt: new Date(),
@@ -170,7 +170,7 @@ describe('LibraryService', () => {
         location: '  Spaced location  '
       };
 
-      datastoreMock.create.and.returnValue(of({
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of({
         ...formValue,
         name: 'Spaced Library',
         id: 'new-lib',
@@ -203,7 +203,7 @@ describe('LibraryService', () => {
       const formValue = { name: 'AAA First Library' };
 
       datastoreMock.list.and.returnValue(of([mockLibrary])); // Test Library
-      datastoreMock.create.and.returnValue(of({
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of({
         id: 'new-lib',
         name: 'AAA First Library',
         createdAt: new Date(),
@@ -231,7 +231,7 @@ describe('LibraryService', () => {
       const updates = { name: 'Updated Name', description: 'Updated desc' };
       const updated = { ...mockLibrary, ...updates, updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
       datastoreMock.list.and.returnValue(of([mockLibrary]));
 
       // Wait for initial load
@@ -251,7 +251,7 @@ describe('LibraryService', () => {
       const updates = { name: '  Spaced  ' };
       const updated = { ...mockLibrary, name: 'Spaced', updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
       datastoreMock.list.and.returnValue(of([mockLibrary]));
 
       setTimeout(() => {
@@ -268,7 +268,7 @@ describe('LibraryService', () => {
       const updates = { name: 'Updated Library' };
       const updated = { ...mockLibrary, ...updates, updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
       datastoreMock.list.and.returnValue(of([mockLibrary]));
 
       // Trigger reload with the new mock data
@@ -286,8 +286,8 @@ describe('LibraryService', () => {
 
   describe('delete', () => {
     it('should delete a library when allowed', (done) => {
-      datastoreMock.query.and.returnValue(of([])); // No borrowed books
-      datastoreMock.delete.and.returnValue(of(void 0));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([])); // No borrowed books
+      (datastoreMock.delete as jasmine.Spy).and.returnValue(of(void 0));
       datastoreMock.list.and.returnValue(of([mockLibrary]));
 
       setTimeout(() => {
@@ -311,7 +311,7 @@ describe('LibraryService', () => {
         addedBy: 'user-1'
       };
 
-      datastoreMock.query.and.returnValue(of([borrowedBook]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([borrowedBook]));
       datastoreMock.list.and.returnValue(of([mockLibrary]));
 
       setTimeout(() => {
@@ -329,7 +329,7 @@ describe('LibraryService', () => {
 
   describe('canDelete', () => {
     it('should return true when no borrowed books', (done) => {
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
 
       service.canDelete('lib-1').subscribe(canDelete => {
         expect(canDelete).toBe(true);
@@ -349,7 +349,7 @@ describe('LibraryService', () => {
         addedBy: 'user-1'
       };
 
-      datastoreMock.query.and.returnValue(of([borrowedBook]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([borrowedBook]));
 
       service.canDelete('lib-1').subscribe(canDelete => {
         expect(canDelete).toBe(false);
@@ -358,7 +358,7 @@ describe('LibraryService', () => {
     });
 
     it('should return false on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.canDelete('lib-1').subscribe(canDelete => {
         expect(canDelete).toBe(false);

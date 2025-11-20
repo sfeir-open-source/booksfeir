@@ -6,7 +6,11 @@
  * Business Rules:
  * - name and email are required
  * - avatar is optional
- * - role determines permissions (USER or ADMIN)
+ * - role determines permissions (USER, LIBRARIAN, or ADMIN)
+ * - libraryIds only applies to LIBRARIAN role
+ * - updatedBy tracks who made the last change
+ *
+ * Feature: Enhanced by 002-user-role-management
  */
 
 export interface User {
@@ -17,6 +21,8 @@ export interface User {
   role: UserRole;                // User's role (permissions)
   createdAt: Date;               // Account creation timestamp
   updatedAt: Date;               // Last profile update timestamp
+  updatedBy: string;             // User ID who made the last update
+  libraryIds?: string[];         // Library IDs assigned to librarians
 }
 
 /**
@@ -24,7 +30,8 @@ export interface User {
  */
 export enum UserRole {
   USER = 'USER',                 // Standard user (can borrow, manage own content)
-  ADMIN = 'ADMIN'                // Administrator (can approve purchase requests, manage all content)
+  LIBRARIAN = 'LIBRARIAN',       // Librarian (can manage assigned libraries)
+  ADMIN = 'ADMIN'                // Administrator (can approve purchase requests, manage all content, assign roles)
 }
 
 /**
@@ -43,6 +50,8 @@ export function isUser(obj: unknown): obj is User {
     (user['avatar'] === undefined || typeof user['avatar'] === 'string') &&
     Object.values(UserRole).includes(user['role'] as UserRole) &&
     user['createdAt'] instanceof Date &&
-    user['updatedAt'] instanceof Date
+    user['updatedAt'] instanceof Date &&
+    typeof user['updatedBy'] === 'string' &&
+    (user['libraryIds'] === undefined || Array.isArray(user['libraryIds']))
   );
 }

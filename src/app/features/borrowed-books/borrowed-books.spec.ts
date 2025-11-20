@@ -1,14 +1,14 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter, Router } from '@angular/router';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MatDialog } from '@angular/material/dialog';
-import { BorrowedBooksComponent } from './borrowed-books';
-import { BorrowService } from '../../core/services/borrow.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { BorrowTransactionWithDetails, BorrowStatus } from '../../core/models/borrow-transaction.model';
-import { User, UserRole } from '../../core/models/user.model';
-import { of, throwError } from 'rxjs';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {provideRouter, Router} from '@angular/router';
+import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {MatDialog} from '@angular/material/dialog';
+import {BorrowedBooksComponent} from './borrowed-books';
+import {BorrowService} from '../../core/services/borrow.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {BorrowStatus, BorrowTransactionWithDetails} from '../../core/models/borrow-transaction.model';
+import {User, UserRole} from '../../core/models/user.model';
+import {of, throwError} from 'rxjs';
 
 describe('BorrowedBooksComponent', () => {
   let component: BorrowedBooksComponent;
@@ -24,7 +24,8 @@ describe('BorrowedBooksComponent', () => {
     email: 'test@example.com',
     role: UserRole.USER,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    updatedBy: 'system'
   };
 
   const mockBorrowedBooks: BorrowTransactionWithDetails[] = [
@@ -350,7 +351,6 @@ describe('BorrowedBooksComponent', () => {
       expect(component.error()).toBe('Failed to load borrowed books');
 
       borrowService.getUserBorrowsWithDetails.and.returnValue(of(mockBorrowedBooks));
-      component.ngOnInit();
 
       expect(component.error()).toBeNull();
       expect(component.borrowedBooks().length).toBe(2);

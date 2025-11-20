@@ -1,0 +1,124 @@
+@if (loading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading users...</p>
+  </div>
+} @else if (filteredUsers().length === 0) {
+  <div class="empty-state">
+    <p>No users to manage</p>
+  </div>
+} @else {
+    <!-- T064: Conditional virtual scrolling for large lists (>100 users) -->
+    @if (useVirtualScroll()) {
+        <cdk-virtual-scroll-viewport [itemSize]="ITEM_SIZE" class="virtual-scroll-viewport">
+            <mat-list>
+                @for (user of filteredUsers(); track user.id) {
+                    <mat-list-item class="user-list-item" tabindex="0"
+                                   [attr.aria-label]="'Manage role for ' + user.name">
+                        <div class="user-content">
+                            <div class="user-left">
+                                @if (user.avatar) {
+                                    <img matListItemAvatar [src]="user.avatar" [alt]="user.name + ' avatar'">
+                                } @else {
+                                    <div matListItemAvatar class="avatar-placeholder">
+                                        {{ getInitials(user.name) }}
+                                    </div>
+                                }
+
+                                <div class="user-info">
+                                    <span matListItemTitle>{{ user.name }}</span>
+                                    <span matListItemLine>{{ user.email }}</span>
+                                </div>
+                            </div>
+
+                            <div class="role-controls">
+                                <sfeir-role-selector
+                                        [currentRole]="user.role"
+                                        [disabled]="false"
+                                        (roleChange)="onRoleChange(user, $event)">
+                                </sfeir-role-selector>
+
+                                @if (user.role === UserRole.LIBRARIAN) {
+                                    <mat-form-field appearance="outline" class="library-select">
+                                        <mat-label>Assigned Libraries</mat-label>
+                                        <mat-select
+                                                multiple
+                                                [value]="user.libraryIds || []"
+                                                (selectionChange)="onLibrariesChange(user, $event.value)">
+                                            @for (library of libraries(); track library.id) {
+                                                <mat-option [value]="library.id">
+                                                    {{ library.name }}
+                                                </mat-option>
+                                            }
+                                        </mat-select>
+                                    </mat-form-field>
+                                }
+
+                                @if (getErrorMessage(user.id); as errorMsg) {
+                                    <div class="error-message">
+                                        {{ errorMsg }}
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </mat-list-item>
+                    <mat-divider></mat-divider>
+                }
+            </mat-list>
+        </cdk-virtual-scroll-viewport>
+    } @else {
+        <mat-list>
+            @for (user of filteredUsers(); track user.id) {
+                <mat-list-item class="user-list-item" tabindex="0" [attr.aria-label]="'Manage role for ' + user.name">
+                    <div class="user-content">
+                        <div class="user-left">
+                            @if (user.avatar) {
+                                <img matListItemAvatar [src]="user.avatar" [alt]="user.name + ' avatar'">
+                            } @else {
+                                <div matListItemAvatar class="avatar-placeholder">
+                                    {{ getInitials(user.name) }}
+                                </div>
+                            }
+
+                            <div class="user-info">
+                                <span matListItemTitle>{{ user.name }}</span>
+                                <span matListItemLine>{{ user.email }}</span>
+                            </div>
+                        </div>
+
+                        <div class="role-controls">
+                            <sfeir-role-selector
+                                    [currentRole]="user.role"
+                                    [disabled]="false"
+                                    (roleChange)="onRoleChange(user, $event)">
+                            </sfeir-role-selector>
+
+                            @if (user.role === UserRole.LIBRARIAN) {
+                                <mat-form-field appearance="outline" class="library-select">
+                                    <mat-label>Assigned Libraries</mat-label>
+                                    <mat-select
+                                            multiple
+                                            [value]="user.libraryIds || []"
+                                            (selectionChange)="onLibrariesChange(user, $event.value)">
+                                        @for (library of libraries(); track library.id) {
+                                            <mat-option [value]="library.id">
+                                                {{ library.name }}
+                                            </mat-option>
+                                        }
+                                    </mat-select>
+                                </mat-form-field>
+                            }
+
+                            @if (getErrorMessage(user.id); as errorMsg) {
+                                <div class="error-message">
+                                    {{ errorMsg }}
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </mat-list-item>
+                <mat-divider></mat-divider>
+            }
+        </mat-list>
+    }
+}

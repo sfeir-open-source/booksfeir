@@ -1,7 +1,7 @@
-import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { AuthMockService } from './auth-mock.service';
-import { UserRole } from '../../models/user.model';
+import {TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {AuthMockService} from './auth-mock.service';
+import {UserRole} from '../../models/user.model';
 
 describe('AuthMockService', () => {
   let service: AuthMockService;
@@ -25,10 +25,10 @@ describe('AuthMockService', () => {
       const user = service.currentUser();
 
       expect(user).toBeTruthy();
-      expect(user?.id).toBe('mock-user-1');
-      expect(user?.name).toBe('Demo User');
-      expect(user?.email).toBe('demo@booksfeir.com');
-      expect(user?.role).toBe(UserRole.USER);
+      expect(user?.id).toBe('admin1');
+      expect(user?.name).toBe('Admin User');
+      expect(user?.email).toBe('admin@booksfeir.com');
+      expect(user?.role).toBe(UserRole.ADMIN);
     });
 
     it('should be reactive', () => {
@@ -65,21 +65,21 @@ describe('AuthMockService', () => {
   });
 
   describe('isAdmin computed', () => {
-    it('should return false for regular user', () => {
-      expect(service.isAdmin()).toBe(false);
-    });
-
-    it('should return true when switched to admin', () => {
-      service.switchToAdmin();
+    it('should return true for admin user by default', () => {
       expect(service.isAdmin()).toBe(true);
     });
 
-    it('should return false when switched back to user', () => {
-      service.switchToAdmin();
-      expect(service.isAdmin()).toBe(true);
-
+    it('should return false when switched to regular user', () => {
       service.switchToUser();
       expect(service.isAdmin()).toBe(false);
+    });
+
+    it('should return true when switched back to admin', () => {
+      service.switchToUser();
+      expect(service.isAdmin()).toBe(false);
+
+      service.switchToAdmin();
+      expect(service.isAdmin()).toBe(true);
     });
   });
 
@@ -87,7 +87,7 @@ describe('AuthMockService', () => {
     it('should return current user as Observable', (done) => {
       service.getCurrentUser().subscribe(user => {
         expect(user).toBeTruthy();
-        expect(user?.id).toBe('mock-user-1');
+        expect(user?.id).toBe('admin1');
         done();
       });
     });
@@ -135,7 +135,7 @@ describe('AuthMockService', () => {
 
     it('should always return mock user regardless of email', (done) => {
       service.login('any-email@example.com').subscribe(user => {
-        expect(user.email).toBe('demo@booksfeir.com');
+        expect(user.email).toBe('admin@booksfeir.com');
         done();
       });
     });
@@ -155,7 +155,7 @@ describe('AuthMockService', () => {
 
   describe('getUserId', () => {
     it('should return user ID when authenticated', () => {
-      expect(service.getUserId()).toBe('mock-user-1');
+      expect(service.getUserId()).toBe('admin1');
     });
 
     it('should return null when not authenticated', () => {
@@ -166,7 +166,7 @@ describe('AuthMockService', () => {
 
   describe('getUserName', () => {
     it('should return user name when authenticated', () => {
-      expect(service.getUserName()).toBe('Demo User');
+      expect(service.getUserName()).toBe('Admin User');
     });
 
     it('should return null when not authenticated', () => {
@@ -177,6 +177,8 @@ describe('AuthMockService', () => {
 
   describe('switchToAdmin', () => {
     it('should switch user to admin role', () => {
+      // Start as admin, switch to user, then back to admin
+      service.switchToUser();
       expect(service.isAdmin()).toBe(false);
 
       service.switchToAdmin();
@@ -191,7 +193,7 @@ describe('AuthMockService', () => {
 
   describe('switchToUser', () => {
     it('should switch admin back to regular user', () => {
-      service.switchToAdmin();
+      // Start as admin (default)
       expect(service.isAdmin()).toBe(true);
 
       service.switchToUser();

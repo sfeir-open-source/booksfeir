@@ -1,10 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { NavigationComponent } from './navigation.component';
-import { AuthMockService } from '../../../core/services/mock/auth-mock.service';
-import { By } from '@angular/platform-browser';
-import { DebugElement } from '@angular/core';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection, signal} from '@angular/core';
+import {provideRouter} from '@angular/router';
+import {NavigationComponent} from './navigation.component';
+import {AuthMockService} from '../../../core/services/mock/auth-mock.service';
+import {By} from '@angular/platform-browser';
 
 describe('NavigationComponent', () => {
   let component: NavigationComponent;
@@ -12,12 +11,18 @@ describe('NavigationComponent', () => {
   let authMock: jasmine.SpyObj<AuthMockService>;
 
   beforeEach(async () => {
-    const authSpyObj = jasmine.createSpyObj('AuthMockService', ['currentUser']);
-    authSpyObj.currentUser = jasmine.createSpy().and.returnValue({
+    // Create a signal for the mock user
+    const userSignal = signal({
       id: 'test-user',
       name: 'Test User',
       email: 'test@example.com',
       avatar: 'https://example.com/avatar.jpg'
+    });
+
+    const authSpyObj = jasmine.createSpyObj('AuthMockService', ['getUserId']);
+    // currentUser is a readonly signal, not a method
+    Object.defineProperty(authSpyObj, 'currentUser', {
+      get: () => userSignal.asReadonly()
     });
 
     await TestBed.configureTestingModule({

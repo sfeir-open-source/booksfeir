@@ -4,6 +4,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthMockService } from '../../../core/services/mock/auth-mock.service';
+import {MatListItemAvatar} from '@angular/material/list';
 
 /**
  * NavigationComponent
@@ -26,7 +27,8 @@ import { AuthMockService } from '../../../core/services/mock/auth-mock.service';
     RouterLinkActive,
     MatToolbarModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    MatListItemAvatar
   ],
   template: `
     <mat-toolbar color="primary" class="navigation-toolbar">
@@ -66,15 +68,11 @@ import { AuthMockService } from '../../../core/services/mock/auth-mock.service';
           @if (currentUser(); as user) {
             <div class="user-info">
               @if (user.avatar) {
-                <img
-                  [src]="user.avatar"
-                  [alt]="user.name"
-                  class="user-avatar"
-                  width="32"
-                  height="32"
-                />
+                <img matListItemAvatar [src]="user.avatar" [alt]="user.name + ' avatar'">
               } @else {
-                <mat-icon class="user-avatar-icon">account_circle</mat-icon>
+                <div matListItemAvatar class="avatar-placeholder">
+                  {{ getInitials(user.name) }}
+                </div>
               }
               <span class="user-name">{{ user.name }}</span>
             </div>
@@ -168,6 +166,20 @@ import { AuthMockService } from '../../../core/services/mock/auth-mock.service';
       gap: 8px;
     }
 
+    // Avatar placeholder styling
+    .avatar-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #1976d2;
+      color: white;
+      font-weight: 500;
+      font-size: 16px;
+    }
+
     .user-avatar {
       width: 32px;
       height: 32px;
@@ -214,4 +226,12 @@ export class NavigationComponent {
 
   // Reactive current user from auth service
   currentUser = this.authService.currentUser;
+
+  getInitials(name: string): string {
+    return name
+      .split(' ')
+      .map(part => part.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join('');
+  }
 }

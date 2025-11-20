@@ -1,10 +1,10 @@
-import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { BookService } from './book.service';
-import { DatastoreMockService } from './mock/datastore-mock.service';
-import { AuthMockService } from './mock/auth-mock.service';
-import { Book, BookStatus } from '../models/book.model';
-import { of, throwError } from 'rxjs';
+import {TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {BookService} from './book.service';
+import {DatastoreMockService} from './mock/datastore-mock.service';
+import {AuthMockService} from './mock/auth-mock.service';
+import {Book, BookStatus} from '../models/book.model';
+import {of, throwError} from 'rxjs';
 
 describe('BookService', () => {
   let service: BookService;
@@ -65,7 +65,7 @@ describe('BookService', () => {
     authMock = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
 
     // Default mock behavior
-    datastoreMock.query.and.returnValue(of([]));
+    (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
 
     service = TestBed.inject(BookService);
   });
@@ -76,7 +76,7 @@ describe('BookService', () => {
 
   describe('getByLibrary', () => {
     it('should retrieve books for a library and update signal', (done) => {
-      datastoreMock.query.and.returnValue(of(mockBooks));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of(mockBooks));
 
       service.getByLibrary('lib-1').subscribe(books => {
         expect(books.length).toBe(2);
@@ -88,7 +88,7 @@ describe('BookService', () => {
 
     it('should sort books by title', (done) => {
       const unsorted = [mockBooks[1], mockBooks[0]]; // Another Book, Test Book
-      datastoreMock.query.and.returnValue(of(unsorted));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of(unsorted));
 
       service.getByLibrary('lib-1').subscribe(books => {
         expect(books[0].title).toBe('Another Book');
@@ -111,7 +111,7 @@ describe('BookService', () => {
     });
 
     it('should return empty array on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.getByLibrary('lib-1').subscribe(books => {
         expect(books).toEqual([]);
@@ -122,7 +122,7 @@ describe('BookService', () => {
 
   describe('getById', () => {
     it('should retrieve a book by ID', (done) => {
-      datastoreMock.read.and.returnValue(of(mockBook));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(mockBook));
 
       service.getById('book-1').subscribe(book => {
         expect(book).toEqual(mockBook);
@@ -132,7 +132,7 @@ describe('BookService', () => {
     });
 
     it('should return null when book not found', (done) => {
-      datastoreMock.read.and.returnValue(of(null));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(null));
 
       service.getById('non-existent').subscribe(book => {
         expect(book).toBeNull();
@@ -141,7 +141,7 @@ describe('BookService', () => {
     });
 
     it('should return null on error', (done) => {
-      datastoreMock.read.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.getById('book-1').subscribe(book => {
         expect(book).toBeNull();
@@ -190,7 +190,7 @@ describe('BookService', () => {
     });
 
     it('should return all library books when query is empty', (done) => {
-      datastoreMock.query.and.returnValue(of(mockBooks));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of(mockBooks));
 
       service.search('lib-1', '').subscribe(books => {
         expect(books.length).toBe(2);
@@ -199,7 +199,7 @@ describe('BookService', () => {
     });
 
     it('should return empty array on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.search('lib-1', 'test').subscribe(books => {
         expect(books).toEqual([]);
@@ -216,7 +216,7 @@ describe('BookService', () => {
         author: 'New Author'
       };
 
-      datastoreMock.create.and.returnValue(of({
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of({
         ...formValue,
         id: 'new-book',
         libraryId: 'lib-1',
@@ -252,7 +252,7 @@ describe('BookService', () => {
         coverImage: 'http://example.com/new-cover.jpg'
       };
 
-      datastoreMock.create.and.returnValue(of({
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of({
         ...formValue,
         id: 'new-book',
         libraryId: 'lib-1',
@@ -278,7 +278,7 @@ describe('BookService', () => {
         author: '  Spaced Author  '
       };
 
-      datastoreMock.create.and.returnValue(of({
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of({
         id: 'new-book',
         libraryId: 'lib-1',
         title: 'Spaced Title',
@@ -339,8 +339,8 @@ describe('BookService', () => {
         addedBy: 'mock-user-1'
       };
 
-      datastoreMock.create.and.returnValue(of(newBook));
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of(newBook));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
 
       service.create('lib-1', formValue).subscribe(() => {
         const books = service.books();
@@ -356,7 +356,7 @@ describe('BookService', () => {
       const updates = { title: 'Updated Title', author: 'Updated Author' };
       const updated = { ...mockBook, ...updates, updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
 
       service.update('book-1', updates).subscribe(book => {
         expect(book.title).toBe('Updated Title');
@@ -373,7 +373,7 @@ describe('BookService', () => {
       const updates = { title: '  Spaced  ' };
       const updated = { ...mockBook, title: 'Spaced', updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
 
       service.update('book-1', updates).subscribe(() => {
         expect(datastoreMock.update).toHaveBeenCalledWith('Book', 'book-1', jasmine.objectContaining({
@@ -402,7 +402,7 @@ describe('BookService', () => {
       };
       const updated = { ...mockBook, ...updates, updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
 
       service.update('book-1', updates).subscribe(book => {
         expect(book.edition).toBe('3rd Edition');
@@ -415,8 +415,8 @@ describe('BookService', () => {
 
   describe('delete', () => {
     it('should delete a book', (done) => {
-      datastoreMock.delete.and.returnValue(of(void 0));
-      datastoreMock.query.and.returnValue(of([mockBook]));
+      (datastoreMock.delete as jasmine.Spy).and.returnValue(of(void 0));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockBook]));
 
       // Load books first
       service.getByLibrary('lib-1').subscribe(() => {
@@ -433,8 +433,8 @@ describe('BookService', () => {
     it('should update book status to BORROWED', (done) => {
       const updated = { ...mockBook, status: BookStatus.BORROWED, updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
-      datastoreMock.query.and.returnValue(of([mockBook]));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockBook]));
 
       // Load books first
       service.getByLibrary('lib-1').subscribe(() => {
@@ -449,7 +449,7 @@ describe('BookService', () => {
     it('should update book status to UNAVAILABLE', (done) => {
       const updated = { ...mockBook, status: BookStatus.UNAVAILABLE, updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
 
       service.updateStatus('book-1', BookStatus.UNAVAILABLE).subscribe(book => {
         expect(book.status).toBe(BookStatus.UNAVAILABLE);
@@ -460,8 +460,8 @@ describe('BookService', () => {
     it('should update signal with new status', (done) => {
       const updated = { ...mockBook, status: BookStatus.BORROWED, updatedAt: new Date() };
 
-      datastoreMock.update.and.returnValue(of(updated));
-      datastoreMock.query.and.returnValue(of([mockBook]));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockBook]));
 
       // Load books first
       service.getByLibrary('lib-1').subscribe(() => {

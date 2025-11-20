@@ -1,17 +1,16 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, WritableSignal, signal } from '@angular/core';
-import { provideRouter, ActivatedRoute } from '@angular/router';
-import { LibraryDetailComponent } from './library-detail.component';
-import { LibraryService } from '../../core/services/library.service';
-import { BookService } from '../../core/services/book.service';
-import { BorrowService } from '../../core/services/borrow.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { Library } from '../../core/models/library.model';
-import { Book, BookStatus } from '../../core/models/book.model';
-import { MatDialog } from '@angular/material/dialog';
-import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
-import { Router } from '@angular/router';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection, signal, WritableSignal} from '@angular/core';
+import {ActivatedRoute, provideRouter, Router} from '@angular/router';
+import {LibraryDetailComponent} from './library-detail.component';
+import {LibraryService} from '../../core/services/library.service';
+import {BookService} from '../../core/services/book.service';
+import {BorrowService} from '../../core/services/borrow.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {Library} from '../../core/models/library.model';
+import {Book, BookStatus} from '../../core/models/book.model';
+import {MatDialog} from '@angular/material/dialog';
+import {By} from '@angular/platform-browser';
+import {of, throwError} from 'rxjs';
 
 describe('LibraryDetailComponent', () => {
   let component: LibraryDetailComponent;
@@ -141,7 +140,6 @@ describe('LibraryDetailComponent', () => {
       libraryServiceMock.getById.and.returnValue(of(mockLibrary));
       bookServiceMock.getByLibrary.and.returnValue(of(mockBooks));
 
-      component.ngOnInit();
 
       expect(libraryServiceMock.getById).toHaveBeenCalledWith('lib-1');
       expect(bookServiceMock.getByLibrary).toHaveBeenCalledWith('lib-1');
@@ -152,7 +150,6 @@ describe('LibraryDetailComponent', () => {
       bookServiceMock.getByLibrary.and.returnValue(of(mockBooks));
       borrowServiceMock.getBookBorrowTransaction.and.returnValue(of(null));
 
-      component.ngOnInit();
 
       setTimeout(() => {
         expect(component.library()).toEqual(mockLibrary);
@@ -165,7 +162,6 @@ describe('LibraryDetailComponent', () => {
     it('should set loading to false after error', (done) => {
       libraryServiceMock.getById.and.returnValue(throwError(() => new Error('Test error')));
 
-      component.ngOnInit();
 
       setTimeout(() => {
         expect(component.isLoading()).toBe(false);
@@ -178,8 +174,6 @@ describe('LibraryDetailComponent', () => {
       const activatedRoute = TestBed.inject(ActivatedRoute);
       (activatedRoute.snapshot.paramMap.get as jasmine.Spy).and.returnValue(null);
 
-      component.ngOnInit();
-
       expect(component.error()).toBe('Library ID is missing');
       expect(component.isLoading()).toBe(false);
     });
@@ -187,7 +181,6 @@ describe('LibraryDetailComponent', () => {
     it('should handle library not found', (done) => {
       libraryServiceMock.getById.and.returnValue(of(null));
 
-      component.ngOnInit();
 
       setTimeout(() => {
         expect(component.error()).toBe('Library not found');
@@ -202,7 +195,7 @@ describe('LibraryDetailComponent', () => {
       libraryServiceMock.getById.and.returnValue(of(mockLibrary));
       bookServiceMock.getByLibrary.and.returnValue(of(mockBooks));
       borrowServiceMock.getBookBorrowTransaction.and.returnValue(of(null));
-      component.ngOnInit();
+
       fixture.detectChanges();
     });
 
@@ -247,7 +240,7 @@ describe('LibraryDetailComponent', () => {
       libraryServiceMock.getById.and.returnValue(of(mockLibrary));
       bookServiceMock.getByLibrary.and.returnValue(of(mockBooks));
       borrowServiceMock.getBookBorrowTransaction.and.returnValue(of(null));
-      component.ngOnInit();
+
       fixture.detectChanges();
     });
 
@@ -298,7 +291,7 @@ describe('LibraryDetailComponent', () => {
       libraryServiceMock.getById.and.returnValue(of(mockLibrary));
       bookServiceMock.getByLibrary.and.returnValue(of(mockBooks));
       borrowServiceMock.getBookBorrowTransaction.and.returnValue(of(null));
-      component.ngOnInit();
+
 
       setTimeout(() => {
         fixture.detectChanges();
@@ -313,7 +306,6 @@ describe('LibraryDetailComponent', () => {
     it('should display error message when error occurs', (done) => {
       libraryServiceMock.getById.and.returnValue(throwError(() => new Error('Network error')));
 
-      component.ngOnInit();
 
       setTimeout(() => {
         fixture.detectChanges();
@@ -326,7 +318,6 @@ describe('LibraryDetailComponent', () => {
     it('should display error icon', (done) => {
       libraryServiceMock.getById.and.returnValue(throwError(() => new Error('Network error')));
 
-      component.ngOnInit();
 
       setTimeout(() => {
         fixture.detectChanges();
@@ -339,7 +330,6 @@ describe('LibraryDetailComponent', () => {
     it('should have return button on error', (done) => {
       libraryServiceMock.getById.and.returnValue(throwError(() => new Error('Network error')));
 
-      component.ngOnInit();
 
       setTimeout(() => {
         fixture.detectChanges();
@@ -437,7 +427,6 @@ describe('LibraryDetailComponent', () => {
       libraryServiceMock.getById.and.returnValue(throwError(() => new Error('Network error')));
       spyOn(console, 'error');
 
-      component.ngOnInit();
 
       setTimeout(() => {
         expect(console.error).toHaveBeenCalledWith('Error loading library:', jasmine.any(Error));
@@ -452,7 +441,6 @@ describe('LibraryDetailComponent', () => {
       bookServiceMock.getByLibrary.and.returnValue(throwError(() => new Error('Network error')));
       spyOn(console, 'error');
 
-      component.ngOnInit();
 
       setTimeout(() => {
         expect(console.error).toHaveBeenCalledWith('Error loading books:', jasmine.any(Error));

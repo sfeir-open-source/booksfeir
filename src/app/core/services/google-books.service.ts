@@ -1,7 +1,7 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import {inject, Injectable} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {Observable, of} from 'rxjs';
+import {catchError, map} from 'rxjs/operators';
 
 /**
  * Google Books API Response Types
@@ -73,7 +73,7 @@ export class GoogleBooksService {
     }
 
     const params = {
-      q: query.trim(),
+      q: (query + "+subject:Computers").trim(),
       maxResults: maxResults.toString()
     };
 

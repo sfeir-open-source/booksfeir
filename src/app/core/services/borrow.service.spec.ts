@@ -1,14 +1,14 @@
-import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { BorrowService } from './borrow.service';
-import { DatastoreMockService } from './mock/datastore-mock.service';
-import { BookService } from './book.service';
-import { LibraryService } from './library.service';
-import { AuthMockService } from './mock/auth-mock.service';
-import { BorrowTransaction, BorrowStatus } from '../models/borrow-transaction.model';
-import { Book, BookStatus } from '../models/book.model';
-import { Library } from '../models/library.model';
-import { of, throwError } from 'rxjs';
+import {TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {BorrowService} from './borrow.service';
+import {DatastoreMockService} from './mock/datastore-mock.service';
+import {BookService} from './book.service';
+import {LibraryService} from './library.service';
+import {AuthMockService} from './mock/auth-mock.service';
+import {BorrowStatus, BorrowTransaction} from '../models/borrow-transaction.model';
+import {Book, BookStatus} from '../models/book.model';
+import {Library} from '../models/library.model';
+import {of, throwError} from 'rxjs';
 
 describe('BorrowService', () => {
   let service: BorrowService;
@@ -85,7 +85,7 @@ describe('BorrowService', () => {
     authMock = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
 
     // Default mock behavior
-    datastoreMock.query.and.returnValue(of([]));
+    (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
     bookServiceMock.getById.and.returnValue(of(mockBook));
     libraryServiceMock.getById.and.returnValue(of(mockLibrary));
 
@@ -98,7 +98,7 @@ describe('BorrowService', () => {
 
   describe('getUserBorrows', () => {
     it('should retrieve active borrows for a user', (done) => {
-      datastoreMock.query.and.returnValue(of([mockTransaction]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockTransaction]));
 
       service.getUserBorrows('user-1').subscribe(borrows => {
         expect(borrows.length).toBe(1);
@@ -123,7 +123,7 @@ describe('BorrowService', () => {
     });
 
     it('should return empty array on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.getUserBorrows('user-1').subscribe(borrows => {
         expect(borrows).toEqual([]);
@@ -134,7 +134,7 @@ describe('BorrowService', () => {
 
   describe('getUserBorrowsWithDetails', () => {
     it('should return empty array when no transactions exist', (done) => {
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
 
       service.getUserBorrowsWithDetails('user-1').subscribe(details => {
         expect(details).toEqual([]);
@@ -143,7 +143,7 @@ describe('BorrowService', () => {
     });
 
     it('should enrich transactions with book and library details', (done) => {
-      datastoreMock.query.and.returnValue(of([mockTransaction]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockTransaction]));
       bookServiceMock.getById.and.returnValue(of(mockBook));
       libraryServiceMock.getById.and.returnValue(of(mockLibrary));
 
@@ -158,7 +158,7 @@ describe('BorrowService', () => {
     });
 
     it('should filter out transactions with null book or library', (done) => {
-      datastoreMock.query.and.returnValue(of([mockTransaction]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockTransaction]));
       bookServiceMock.getById.and.returnValue(of(null));
       libraryServiceMock.getById.and.returnValue(of(mockLibrary));
 
@@ -169,7 +169,7 @@ describe('BorrowService', () => {
     });
 
     it('should return empty array on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.getUserBorrowsWithDetails('user-1').subscribe(details => {
         expect(details).toEqual([]);
@@ -180,7 +180,7 @@ describe('BorrowService', () => {
 
   describe('getBookBorrowTransaction', () => {
     it('should return active borrow transaction for a book', (done) => {
-      datastoreMock.query.and.returnValue(of([mockTransaction]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockTransaction]));
 
       service.getBookBorrowTransaction('book-1').subscribe(transaction => {
         expect(transaction).toBeTruthy();
@@ -191,7 +191,7 @@ describe('BorrowService', () => {
     });
 
     it('should return null when book is not borrowed', (done) => {
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
 
       service.getBookBorrowTransaction('book-1').subscribe(transaction => {
         expect(transaction).toBeNull();
@@ -200,7 +200,7 @@ describe('BorrowService', () => {
     });
 
     it('should return null on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.getBookBorrowTransaction('book-1').subscribe(transaction => {
         expect(transaction).toBeNull();
@@ -211,7 +211,7 @@ describe('BorrowService', () => {
 
   describe('checkCanBorrow', () => {
     it('should allow borrowing when all conditions are met', (done) => {
-      datastoreMock.query.and.returnValue(of([])); // No active borrows
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([])); // No active borrows
       bookServiceMock.getById.and.returnValue(of(mockBook));
 
       service.checkCanBorrow('user-1', 'book-1').subscribe(result => {
@@ -259,7 +259,7 @@ describe('BorrowService', () => {
     });
 
     it('should reject when book does not exist', (done) => {
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
       bookServiceMock.getById.and.returnValue(of(null));
 
       service.checkCanBorrow('user-1', 'non-existent').subscribe(result => {
@@ -271,7 +271,7 @@ describe('BorrowService', () => {
 
     it('should reject when book is not available', (done) => {
       const borrowedBook = { ...mockBook, status: BookStatus.BORROWED };
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
       bookServiceMock.getById.and.returnValue(of(borrowedBook));
 
       service.checkCanBorrow('user-1', 'book-1').subscribe(result => {
@@ -297,9 +297,9 @@ describe('BorrowService', () => {
 
   describe('borrowBook', () => {
     it('should create borrow transaction and update book status', (done) => {
-      datastoreMock.query.and.returnValue(of([])); // No active borrows
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([])); // No active borrows
       bookServiceMock.getById.and.returnValue(of(mockBook));
-      datastoreMock.create.and.returnValue(of(mockTransaction));
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of(mockTransaction));
       bookServiceMock.updateStatus.and.returnValue(of({ ...mockBook, status: BookStatus.BORROWED }));
 
       const dto = {
@@ -322,7 +322,7 @@ describe('BorrowService', () => {
     });
 
     it('should set due date to 14 days from now', (done) => {
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
       bookServiceMock.getById.and.returnValue(of(mockBook));
       (datastoreMock.create.and.callFake as any)((entityType: string, data: any) => {
         expect(data.dueDate).toBeTruthy();
@@ -374,9 +374,9 @@ describe('BorrowService', () => {
     });
 
     it('should update signal with new transaction', (done) => {
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
       bookServiceMock.getById.and.returnValue(of(mockBook));
-      datastoreMock.create.and.returnValue(of(mockTransaction));
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of(mockTransaction));
       bookServiceMock.updateStatus.and.returnValue(of({ ...mockBook, status: BookStatus.BORROWED }));
 
       const dto = {
@@ -396,8 +396,8 @@ describe('BorrowService', () => {
     it('should update transaction status and book status', (done) => {
       const returnedTransaction = { ...mockTransaction, status: BorrowStatus.RETURNED, returnedAt: new Date() };
 
-      datastoreMock.read.and.returnValue(of(mockTransaction));
-      datastoreMock.update.and.returnValue(of(returnedTransaction));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(mockTransaction));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(returnedTransaction));
       bookServiceMock.updateStatus.and.returnValue(of({ ...mockBook, status: BookStatus.AVAILABLE }));
 
       service.returnBook('txn-1').subscribe(transaction => {
@@ -413,7 +413,7 @@ describe('BorrowService', () => {
     });
 
     it('should throw error when transaction not found', (done) => {
-      datastoreMock.read.and.returnValue(of(null));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(null));
 
       service.returnBook('non-existent').subscribe({
         next: () => fail('Should have thrown error'),
@@ -427,7 +427,7 @@ describe('BorrowService', () => {
     it('should throw error when book already returned', (done) => {
       const returnedTransaction = { ...mockTransaction, status: BorrowStatus.RETURNED };
 
-      datastoreMock.read.and.returnValue(of(returnedTransaction));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(returnedTransaction));
 
       service.returnBook('txn-1').subscribe({
         next: () => fail('Should have thrown error'),
@@ -441,9 +441,9 @@ describe('BorrowService', () => {
     it('should remove transaction from signal cache', (done) => {
       const returnedTransaction = { ...mockTransaction, status: BorrowStatus.RETURNED, returnedAt: new Date() };
 
-      datastoreMock.query.and.returnValue(of([mockTransaction]));
-      datastoreMock.read.and.returnValue(of(mockTransaction));
-      datastoreMock.update.and.returnValue(of(returnedTransaction));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockTransaction]));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(mockTransaction));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(returnedTransaction));
       bookServiceMock.updateStatus.and.returnValue(of({ ...mockBook, status: BookStatus.AVAILABLE }));
 
       // First load user borrows

@@ -1,0 +1,15 @@
+<mat-form-field appearance="outline" class="role-field">
+  <mat-label>Role</mat-label>
+  <mat-select
+    [value]="currentRole()"
+    [disabled]="disabled()"
+    (selectionChange)="onRoleChange($event.value)"
+    aria-label="Assign user role"
+    [attr.aria-required]="true">
+    @for (role of availableRoles; track role.value) {
+      <mat-option [value]="role.value" [attr.aria-label]="'Assign ' + role.label + ' role'">
+        {{ role.label }}
+      </mat-option>
+    }
+  </mat-select>
+</mat-form-field>

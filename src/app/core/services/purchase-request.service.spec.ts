@@ -1,9 +1,9 @@
-import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { PurchaseRequestService } from './purchase-request.service';
-import { DatastoreMockService } from './mock/datastore-mock.service';
-import { PurchaseRequest, PurchaseRequestStatus } from '../models/purchase-request.model';
-import { of, throwError } from 'rxjs';
+import {TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {PurchaseRequestService} from './purchase-request.service';
+import {DatastoreMockService} from './mock/datastore-mock.service';
+import {PurchaseRequest, PurchaseRequestStatus} from '../models/purchase-request.model';
+import {of, throwError} from 'rxjs';
 
 describe('PurchaseRequestService', () => {
   let service: PurchaseRequestService;
@@ -64,7 +64,7 @@ describe('PurchaseRequestService', () => {
 
     // Default mock behavior
     datastoreMock.list.and.returnValue(of([]));
-    datastoreMock.query.and.returnValue(of([]));
+    (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
 
     service = TestBed.inject(PurchaseRequestService);
   });
@@ -92,7 +92,7 @@ describe('PurchaseRequestService', () => {
         updatedAt: new Date()
       };
 
-      datastoreMock.create.and.returnValue(of(created));
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of(created));
       datastoreMock.list.and.returnValue(of([created]));
 
       service.create(dto).subscribe(request => {
@@ -131,7 +131,7 @@ describe('PurchaseRequestService', () => {
         updatedAt: new Date()
       };
 
-      datastoreMock.create.and.returnValue(of(created));
+      (datastoreMock.create as jasmine.Spy).and.returnValue(of(created));
       datastoreMock.list.and.returnValue(of([created]));
 
       service.create(dto).subscribe(request => {
@@ -150,7 +150,7 @@ describe('PurchaseRequestService', () => {
         userId: 'user-1'
       };
 
-      datastoreMock.create.and.returnValue(throwError(() => new Error('Create failed')));
+      (datastoreMock.create as jasmine.Spy).and.returnValue(throwError(() => new Error('Create failed')));
 
       service.create(dto).subscribe({
         next: () => fail('Should have thrown error'),
@@ -196,7 +196,7 @@ describe('PurchaseRequestService', () => {
 
   describe('getById', () => {
     it('should retrieve a purchase request by ID', (done) => {
-      datastoreMock.read.and.returnValue(of(mockPurchaseRequest));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(mockPurchaseRequest));
 
       service.getById('req-1').subscribe(request => {
         expect(request).toEqual(mockPurchaseRequest);
@@ -206,7 +206,7 @@ describe('PurchaseRequestService', () => {
     });
 
     it('should return null when request not found', (done) => {
-      datastoreMock.read.and.returnValue(of(null));
+      (datastoreMock.read as jasmine.Spy).and.returnValue(of(null));
 
       service.getById('non-existent').subscribe(request => {
         expect(request).toBeNull();
@@ -230,7 +230,7 @@ describe('PurchaseRequestService', () => {
     });
 
     it('should sort library requests by requestedAt (newest first)', (done) => {
-      datastoreMock.query.and.returnValue(of([mockRequests[0], mockRequests[1]]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([mockRequests[0], mockRequests[1]]));
 
       service.getByLibrary('lib-1').subscribe(requests => {
         expect(requests[0].requestedAt.getTime()).toBeGreaterThan(requests[1].requestedAt.getTime());
@@ -239,7 +239,7 @@ describe('PurchaseRequestService', () => {
     });
 
     it('should return empty array on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.getByLibrary('lib-1').subscribe(requests => {
         expect(requests).toEqual([]);
@@ -277,7 +277,7 @@ describe('PurchaseRequestService', () => {
     });
 
     it('should return empty array on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.getByStatus(PurchaseRequestStatus.PENDING).subscribe(requests => {
         expect(requests).toEqual([]);
@@ -300,7 +300,7 @@ describe('PurchaseRequestService', () => {
     });
 
     it('should return false when no duplicate exists', (done) => {
-      datastoreMock.query.and.returnValue(of([]));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(of([]));
 
       service.checkDuplicate('google-book-999', 'lib-1').subscribe(isDuplicate => {
         expect(isDuplicate).toBe(false);
@@ -323,7 +323,7 @@ describe('PurchaseRequestService', () => {
     });
 
     it('should return false on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+      (datastoreMock.query as jasmine.Spy).and.returnValue(throwError(() => new Error('Test error')));
 
       service.checkDuplicate('google-book-1', 'lib-1').subscribe(isDuplicate => {
         expect(isDuplicate).toBe(false);
@@ -341,7 +341,7 @@ describe('PurchaseRequestService', () => {
         reviewedBy: 'admin-1'
       };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
       datastoreMock.list.and.returnValue(of([updated]));
 
       service.updateStatus('req-1', PurchaseRequestStatus.APPROVED, 'admin-1').subscribe(request => {
@@ -364,7 +364,7 @@ describe('PurchaseRequestService', () => {
         reviewNotes: 'Already have this book'
       };
 
-      datastoreMock.update.and.returnValue(of(updated));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(of(updated));
       datastoreMock.list.and.returnValue(of([updated]));
 
       service.updateStatus('req-1', PurchaseRequestStatus.REJECTED, 'admin-1', 'Already have this book')
@@ -376,7 +376,7 @@ describe('PurchaseRequestService', () => {
     });
 
     it('should throw error on update failure', (done) => {
-      datastoreMock.update.and.returnValue(throwError(() => new Error('Update failed')));
+      (datastoreMock.update as jasmine.Spy).and.returnValue(throwError(() => new Error('Update failed')));
 
       service.updateStatus('req-1', PurchaseRequestStatus.APPROVED, 'admin-1').subscribe({
         next: () => fail('Should have thrown error'),
@@ -390,7 +390,7 @@ describe('PurchaseRequestService', () => {
 
   describe('delete', () => {
     it('should delete a purchase request', (done) => {
-      datastoreMock.delete.and.returnValue(of(void 0));
+      (datastoreMock.delete as jasmine.Spy).and.returnValue(of(void 0));
       datastoreMock.list.and.returnValue(of([]));
 
       service.delete('req-1').subscribe(() => {
@@ -400,7 +400,7 @@ describe('PurchaseRequestService', () => {
     });
 
     it('should throw error on delete failure', (done) => {
-      datastoreMock.delete.and.returnValue(throwError(() => new Error('Delete failed')));
+      (datastoreMock.delete as jasmine.Spy).and.returnValue(throwError(() => new Error('Delete failed')));
 
       service.delete('req-1').subscribe({
         next: () => fail('Should have thrown error'),

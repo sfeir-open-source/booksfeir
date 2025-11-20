@@ -1,0 +1,27 @@
+@if (loading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="30"></mat-spinner>
+    <p>Loading audit trail...</p>
+  </div>
+} @else if (formattedEntries().length === 0) {
+  <div class="empty-state">
+    <p>No audit entries found</p>
+  </div>
+} @else {
+  <mat-list class="audit-list">
+    <h3 mat-subheader>Role Change History</h3>
+    @for (entry of formattedEntries(); track entry.id) {
+      <mat-list-item>
+        <div class="audit-entry">
+          <div class="audit-info">
+            <span class="audit-description">{{ entry.description }}</span>
+            <span class="audit-metadata">
+              Changed by {{ entry.changedBy }} on {{ entry.timestamp }}
+            </span>
+          </div>
+        </div>
+      </mat-list-item>
+      <mat-divider></mat-divider>
+    }
+  </mat-list>
+}

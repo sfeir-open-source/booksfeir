@@ -1,0 +1,41 @@
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  color: rgba(0, 0, 0, 0.6);
+  font-style: italic;
+}
+
+.audit-list {
+  padding: 0;
+}
+
+.audit-entry {
+  width: 100%;
+  padding: 12px 0;
+}
+
+.audit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audit-description {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.audit-metadata {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+}
