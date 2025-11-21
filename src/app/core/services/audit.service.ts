@@ -9,7 +9,7 @@
  */
 
 import {Injectable} from '@angular/core';
-import {from, map, Observable, switchMap} from 'rxjs';
+import {firstValueFrom, from, map, Observable, switchMap} from 'rxjs';
 import {DatastoreService} from './datastore.service';
 import {AuditEntry} from '../models/audit-entry.model';
 import {UserRole} from '../models/user.model';
@@ -107,5 +107,50 @@ export class AuditService {
         return from([0]);
       })
     );
+  }
+
+  // Promise-based wrapper methods for easier testing and imperative usage
+
+  /**
+   * Log a role change event (Promise-based)
+   * @param userId - User whose role changed
+   * @param oldRole - Previous role
+   * @param newRole - New role
+   * @param changedBy - Admin who made the change
+   * @returns Promise of created audit entry
+   */
+  logRoleChange(
+    userId: string,
+    oldRole: UserRole,
+    newRole: UserRole,
+    changedBy: string
+  ): Promise<AuditEntry> {
+    return firstValueFrom(this.logRoleChange$(userId, oldRole, newRole, changedBy));
+  }
+
+  /**
+   * Get audit trail for a specific user (Promise-based)
+   * @param userId - User ID to get audit trail for
+   * @returns Promise of audit entries array, sorted by timestamp descending
+   */
+  getAuditTrail(userId: string): Promise<AuditEntry[]> {
+    return firstValueFrom(this.getAuditTrail$(userId));
+  }
+
+  /**
+   * Get all audit entries (admin view) (Promise-based)
+   * @param limit - Maximum number of entries to return
+   * @returns Promise of audit entries array, sorted by timestamp descending
+   */
+  getAllAuditEntries(limit?: number): Promise<AuditEntry[]> {
+    return firstValueFrom(this.getAllAuditEntries$(limit));
+  }
+
+  /**
+   * Clean up audit entries older than retention period (Promise-based)
+   * @returns Promise of number of entries deleted
+   */
+  cleanupOldEntries(): Promise<number> {
+    return firstValueFrom(this.cleanupOldEntries$());
   }
 }

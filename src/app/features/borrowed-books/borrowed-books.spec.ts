@@ -9,14 +9,15 @@ import {AuthMockService} from '../../core/services/mock/auth-mock.service';
 import {BorrowStatus, BorrowTransactionWithDetails} from '../../core/models/borrow-transaction.model';
 import {User, UserRole} from '../../core/models/user.model';
 import {of, throwError} from 'rxjs';
+import {vi} from 'vitest';
 
 describe('BorrowedBooksComponent', () => {
   let component: BorrowedBooksComponent;
   let fixture: ComponentFixture<BorrowedBooksComponent>;
-  let borrowService: jasmine.SpyObj<BorrowService>;
-  let authService: jasmine.SpyObj<AuthMockService>;
-  let router: jasmine.SpyObj<Router>;
-  let dialog: jasmine.SpyObj<MatDialog>;
+  let borrowService: any;
+  let authService: any;
+  let router: any;
+  let dialog: any;
 
   const mockUser: User = {
     id: 'user-1',
@@ -64,19 +65,25 @@ describe('BorrowedBooksComponent', () => {
   ];
 
   beforeEach(async () => {
-    const borrowServiceSpy = jasmine.createSpyObj('BorrowService', [
-      'getUserBorrowsWithDetails',
-      'returnBook',
-      'isOverdue',
-      'getDaysRemaining'
-    ]);
+    const borrowServiceSpy = {
+      getUserBorrowsWithDetails: vi.fn(),
+      returnBook: vi.fn(),
+      isOverdue: vi.fn(),
+      getDaysRemaining: vi.fn()
+    };
 
-    const authServiceSpy = jasmine.createSpyObj('AuthMockService', ['currentUser']);
-    authServiceSpy.currentUser.and.returnValue(mockUser);
+    const authServiceSpy = {
+      currentUser: vi.fn()
+    };
+    authServiceSpy.currentUser.mockReturnValue(mockUser);
 
-    const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    const routerSpy = {
+      navigate: vi.fn()
+    };
 
-    const dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    const dialogSpy = {
+      open: vi.fn()
+    };
 
     await TestBed.configureTestingModule({
       imports: [
@@ -93,14 +100,14 @@ describe('BorrowedBooksComponent', () => {
       ]
     }).compileComponents();
 
-    borrowService = TestBed.inject(BorrowService) as jasmine.SpyObj<BorrowService>;
-    authService = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
-    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
-    dialog = TestBed.inject(MatDialog) as jasmine.SpyObj<MatDialog>;
+    borrowService = TestBed.inject(BorrowService) as any;
+    authService = TestBed.inject(AuthMockService) as any;
+    router = TestBed.inject(Router) as any;
+    dialog = TestBed.inject(MatDialog) as any;
 
-    borrowService.getUserBorrowsWithDetails.and.returnValue(of(mockBorrowedBooks));
-    borrowService.isOverdue.and.returnValue(false);
-    borrowService.getDaysRemaining.and.returnValue(5);
+    borrowService.getUserBorrowsWithDetails.mockReturnValue(of(mockBorrowedBooks));
+    borrowService.isOverdue.mockReturnValue(false);
+    borrowService.getDaysRemaining.mockReturnValue(5);
 
     fixture = TestBed.createComponent(BorrowedBooksComponent);
     component = fixture.componentInstance;
@@ -122,7 +129,7 @@ describe('BorrowedBooksComponent', () => {
     });
 
     it('should show error if user is not logged in', () => {
-      authService.currentUser.and.returnValue(null);
+      authService.currentUser.mockReturnValue(null);
       fixture = TestBed.createComponent(BorrowedBooksComponent);
       component = fixture.componentInstance;
       fixture.detectChanges();
@@ -133,7 +140,7 @@ describe('BorrowedBooksComponent', () => {
     });
 
     it('should handle load errors gracefully', () => {
-      borrowService.getUserBorrowsWithDetails.and.returnValue(
+      borrowService.getUserBorrowsWithDetails.mockReturnValue(
         throwError(() => new Error('Failed to load'))
       );
       fixture = TestBed.createComponent(BorrowedBooksComponent);
@@ -162,7 +169,7 @@ describe('BorrowedBooksComponent', () => {
         }
       ];
 
-      borrowService.getUserBorrowsWithDetails.and.returnValue(of(mixedBorrows));
+      borrowService.getUserBorrowsWithDetails.mockReturnValue(of(mixedBorrows));
       fixture = TestBed.createComponent(BorrowedBooksComponent);
       component = fixture.componentInstance;
       fixture.detectChanges();
@@ -185,7 +192,7 @@ describe('BorrowedBooksComponent', () => {
     });
 
     it('should show empty state when no books are borrowed', () => {
-      borrowService.getUserBorrowsWithDetails.and.returnValue(of([]));
+      borrowService.getUserBorrowsWithDetails.mockReturnValue(of([]));
       fixture = TestBed.createComponent(BorrowedBooksComponent);
       component = fixture.componentInstance;
       fixture.detectChanges();
@@ -229,7 +236,7 @@ describe('BorrowedBooksComponent', () => {
 
     it('should check if book is overdue', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(true);
+      borrowService.isOverdue.mockReturnValue(true);
 
       const isOverdue = component.isOverdue(transaction);
 
@@ -239,7 +246,7 @@ describe('BorrowedBooksComponent', () => {
 
     it('should get days remaining for transaction', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.getDaysRemaining.and.returnValue(7);
+      borrowService.getDaysRemaining.mockReturnValue(7);
 
       const daysRemaining = component.getDaysRemaining(transaction);
 
@@ -249,7 +256,7 @@ describe('BorrowedBooksComponent', () => {
 
     it('should return warn color for overdue books', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(true);
+      borrowService.isOverdue.mockReturnValue(true);
 
       const color = component.getStatusColor(transaction);
 
@@ -258,8 +265,8 @@ describe('BorrowedBooksComponent', () => {
 
     it('should return accent color for books due soon', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(false);
-      borrowService.getDaysRemaining.and.returnValue(2);
+      borrowService.isOverdue.mockReturnValue(false);
+      borrowService.getDaysRemaining.mockReturnValue(2);
 
       const color = component.getStatusColor(transaction);
 
@@ -268,8 +275,8 @@ describe('BorrowedBooksComponent', () => {
 
     it('should return primary color for books with time remaining', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(false);
-      borrowService.getDaysRemaining.and.returnValue(10);
+      borrowService.isOverdue.mockReturnValue(false);
+      borrowService.getDaysRemaining.mockReturnValue(10);
 
       const color = component.getStatusColor(transaction);
 
@@ -278,8 +285,8 @@ describe('BorrowedBooksComponent', () => {
 
     it('should display overdue message correctly', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(true);
-      borrowService.getDaysRemaining.and.returnValue(-5);
+      borrowService.isOverdue.mockReturnValue(true);
+      borrowService.getDaysRemaining.mockReturnValue(-5);
 
       const statusText = component.getStatusText(transaction);
 
@@ -288,8 +295,8 @@ describe('BorrowedBooksComponent', () => {
 
     it('should display "Due today" message', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(false);
-      borrowService.getDaysRemaining.and.returnValue(0);
+      borrowService.isOverdue.mockReturnValue(false);
+      borrowService.getDaysRemaining.mockReturnValue(0);
 
       const statusText = component.getStatusText(transaction);
 
@@ -298,8 +305,8 @@ describe('BorrowedBooksComponent', () => {
 
     it('should display "Due tomorrow" message', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(false);
-      borrowService.getDaysRemaining.and.returnValue(1);
+      borrowService.isOverdue.mockReturnValue(false);
+      borrowService.getDaysRemaining.mockReturnValue(1);
 
       const statusText = component.getStatusText(transaction);
 
@@ -308,8 +315,8 @@ describe('BorrowedBooksComponent', () => {
 
     it('should display days remaining message', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(false);
-      borrowService.getDaysRemaining.and.returnValue(7);
+      borrowService.isOverdue.mockReturnValue(false);
+      borrowService.getDaysRemaining.mockReturnValue(7);
 
       const statusText = component.getStatusText(transaction);
 
@@ -318,8 +325,8 @@ describe('BorrowedBooksComponent', () => {
 
     it('should handle null due date', () => {
       const transaction = mockBorrowedBooks[0];
-      borrowService.isOverdue.and.returnValue(false);
-      borrowService.getDaysRemaining.and.returnValue(null);
+      borrowService.isOverdue.mockReturnValue(false);
+      borrowService.getDaysRemaining.mockReturnValue(null);
 
       const statusText = component.getStatusText(transaction);
 
@@ -341,7 +348,7 @@ describe('BorrowedBooksComponent', () => {
 
   describe('Error Handling', () => {
     it('should clear error when successfully reloading books', () => {
-      borrowService.getUserBorrowsWithDetails.and.returnValue(
+      borrowService.getUserBorrowsWithDetails.mockReturnValue(
         throwError(() => new Error('First error'))
       );
       fixture = TestBed.createComponent(BorrowedBooksComponent);
@@ -350,7 +357,7 @@ describe('BorrowedBooksComponent', () => {
 
       expect(component.error()).toBe('Failed to load borrowed books');
 
-      borrowService.getUserBorrowsWithDetails.and.returnValue(of(mockBorrowedBooks));
+      borrowService.getUserBorrowsWithDetails.mockReturnValue(of(mockBorrowedBooks));
 
       expect(component.error()).toBeNull();
       expect(component.borrowedBooks().length).toBe(2);

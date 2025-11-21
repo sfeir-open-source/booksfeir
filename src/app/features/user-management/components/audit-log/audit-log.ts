@@ -7,7 +7,7 @@
  * Feature: 002-user-role-management (T057, T058 - Phase 6)
  */
 
-import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
+import {Component, computed, inject, input} from '@angular/core';
 import {toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {MatListModule} from '@angular/material/list';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
@@ -32,8 +32,7 @@ interface FormattedAuditEntry {
   selector: 'sfeir-audit-log',
   imports: [MatListModule, MatProgressSpinnerModule, MatDividerModule],
   templateUrl: './audit-log.html',
-  styleUrl: './audit-log.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './audit-log.scss'
 })
 export class AuditLog {
   private auditService = inject(AuditService);
@@ -55,12 +54,15 @@ export class AuditLog {
     })
   );
 
-  auditEntries = toSignal(this.auditEntries$, {initialValue: [] as AuditEntry[]});
+  // Use undefined as initial value to properly track loading state
+  auditEntries = toSignal(this.auditEntries$, {initialValue: undefined});
   loading = computed(() => this.auditEntries() === undefined);
 
   // T058: Computed signal for formatted audit entries
   formattedEntries = computed<FormattedAuditEntry[]>(() => {
-    return this.auditEntries().map(entry => ({
+    const entries = this.auditEntries();
+    if (!entries) return [];
+    return entries.map(entry => ({
       id: entry.id,
       timestamp: new Date(entry.timestamp).toLocaleString(),
       changedBy: entry.changedBy,

@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {Component, inject, signal} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {MatCardModule} from '@angular/material/card';
@@ -34,7 +34,6 @@ import {ConfirmDialogComponent, ConfirmDialogData} from '../shared/dialogs/confi
  */
 @Component({
   selector: 'sfeir-book-search',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatCardModule,
@@ -48,8 +47,7 @@ import {ConfirmDialogComponent, ConfirmDialogData} from '../shared/dialogs/confi
     MatChipsModule
   ],
   templateUrl: './book-search.component.html',
-  styleUrl: './book-search.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './book-search.component.scss'
 })
 export class BookSearchComponent {
   private fb = inject(FormBuilder);
@@ -89,15 +87,20 @@ export class BookSearchComponent {
 
   private searchResults$ = this.searchTrigger$.pipe(
     tap(() => {
+      this.isSearching.set(true);
       this.searchPerformed.set(true);
       this.error.set(null);
     }),
     switchMap(query =>
       this.googleBooksService.search(query, 20).pipe(
-        tap(results => this.searchResults.set(results)),
+        tap(results => {
+          this.searchResults.set(results);
+          this.isSearching.set(false);
+        }),
         catchError(error => {
           this.error.set('Failed to search books. Please try again.');
           this.searchResults.set([]);
+          this.isSearching.set(false);
           return of([] as GoogleBookResult[]);
         })
       )
@@ -105,8 +108,9 @@ export class BookSearchComponent {
   );
 
   private purchaseRequest$ = this.purchaseRequestTrigger$.pipe(
-    switchMap(({book, libraryId, userId}) =>
-      this.purchaseRequestService.create({
+    switchMap(({book, libraryId, userId}) => {
+      this.isSubmitting.set(book.googleBooksId);
+      return this.purchaseRequestService.create({
         userId,
         libraryId,
         title: book.title,
@@ -117,13 +121,17 @@ export class BookSearchComponent {
         coverImage: book.coverImage,
         googleBooksId: book.googleBooksId
       }).pipe(
-        tap(() => this.showSuccessDialog(book)),
+        tap(() => {
+          this.showSuccessDialog(book);
+          this.isSubmitting.set(null);
+        }),
         catchError(error => {
           this.error.set('Failed to submit purchase request');
+          this.isSubmitting.set(null);
           return of(undefined);
         })
       )
-    )
+    })
   );
 
   // Convert to signals
@@ -153,10 +161,7 @@ export class BookSearchComponent {
     }
 
     const query = this.searchForm.get('query')?.value;
-    this.isSearching.set(true);
     this.searchTrigger$.next(query);
-    // Reset loading after a delay to show spinner
-    setTimeout(() => this.isSearching.set(false), 500);
   }
 
   onRequestPurchase(book: GoogleBookResult): void {
@@ -175,32 +180,27 @@ export class BookSearchComponent {
 
     // For duplicate check, we'll use a simpler approach with toSignal
     if (book.googleBooksId) {
-      this.isSubmitting.set(book.googleBooksId);
       this.error.set(null);
 
       const duplicateCheck$ = this.purchaseRequestService.checkDuplicate(book.googleBooksId, libraryId).pipe(
         tap(isDuplicate => {
           if (isDuplicate) {
             this.showDuplicateDialog(book);
-            this.isSubmitting.set(null);
           } else {
             this.purchaseRequestTrigger$.next({book, libraryId, userId: currentUser.id});
-            setTimeout(() => this.isSubmitting.set(null), 500);
           }
         }),
         catchError(() => {
           // Proceed with request even if check fails
           this.purchaseRequestTrigger$.next({book, libraryId, userId: currentUser.id});
-          setTimeout(() => this.isSubmitting.set(null), 500);
           return of(false);
         })
       );
 
-      toSignal(duplicateCheck$);
+      // Subscribe to trigger the observable
+      duplicateCheck$.subscribe();
     } else {
-      this.isSubmitting.set(book.googleBooksId);
       this.purchaseRequestTrigger$.next({book, libraryId, userId: currentUser.id});
-      setTimeout(() => this.isSubmitting.set(null), 500);
     }
   }
 

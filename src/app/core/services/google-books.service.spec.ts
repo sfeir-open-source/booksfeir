@@ -1,8 +1,8 @@
-import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { GoogleBooksService, GoogleBooksResponse, GoogleBooksVolume } from './google-books.service';
+import {TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {provideHttpClient} from '@angular/common/http';
+import {HttpTestingController, provideHttpClientTesting} from '@angular/common/http/testing';
+import {GoogleBooksResponse, GoogleBooksService, GoogleBooksVolume} from './google-books.service';
 
 describe('GoogleBooksService', () => {
   let service: GoogleBooksService;
@@ -28,7 +28,8 @@ describe('GoogleBooksService', () => {
     }
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -44,6 +45,7 @@ describe('GoogleBooksService', () => {
 
   afterEach(() => {
     httpMock.verify();
+    TestBed.resetTestingModule();
   });
 
   it('should be created', () => {
@@ -51,38 +53,36 @@ describe('GoogleBooksService', () => {
   });
 
   describe('search', () => {
-    it('should return empty array for empty query', (done) => {
+    it('should return empty array for empty query', () => {
       service.search('').subscribe(results => {
         expect(results).toEqual([]);
-        done();
+
       });
 
       // No HTTP request should be made
       httpMock.expectNone(API_URL);
     });
 
-    it('should return empty array for whitespace query', (done) => {
+    it('should return empty array for whitespace query', () => {
       service.search('   ').subscribe(results => {
         expect(results).toEqual([]);
-        done();
+
       });
 
       httpMock.expectNone(API_URL);
     });
 
-    it('should make HTTP GET request with correct parameters', (done) => {
+    it('should make HTTP GET request with correct parameters', () => {
       const mockResponse: GoogleBooksResponse = {
         totalItems: 1,
         items: [mockVolume]
       };
 
-      service.search('test query', 10).subscribe(() => {
-        done();
-      });
+      service.search('test query', 10).subscribe();
 
       const req = httpMock.expectOne(request => {
         return request.url === API_URL &&
-               request.params.get('q') === 'test query' &&
+          request.params.get('q') === 'test query+subject:Computers' &&
                request.params.get('maxResults') === '10';
       });
 
@@ -90,14 +90,14 @@ describe('GoogleBooksService', () => {
       req.flush(mockResponse);
     });
 
-    it('should use default maxResults of 20 when not specified', (done) => {
+    it('should use default maxResults of 20 when not specified', () => {
       const mockResponse: GoogleBooksResponse = {
         totalItems: 0,
         items: []
       };
 
       service.search('test').subscribe(() => {
-        done();
+
       });
 
       const req = httpMock.expectOne(request => {
@@ -108,25 +108,25 @@ describe('GoogleBooksService', () => {
       req.flush(mockResponse);
     });
 
-    it('should trim the search query', (done) => {
+    it('should trim the search query', () => {
       const mockResponse: GoogleBooksResponse = {
         totalItems: 0,
         items: []
       };
 
       service.search('  spaced query  ').subscribe(() => {
-        done();
+
       });
 
       const req = httpMock.expectOne(request => {
-        return request.params.get('q') === 'spaced query';
+        return request.params.get('q') === 'spaced query+subject:Computers';
       });
 
-      expect(req.request.params.get('q')).toBe('spaced query');
+      expect(req.request.params.get('q')).toBe('spaced query+subject:Computers');
       req.flush(mockResponse);
     });
 
-    it('should transform API response to app format', (done) => {
+    it('should transform API response to app format', () => {
       const mockResponse: GoogleBooksResponse = {
         totalItems: 1,
         items: [mockVolume]
@@ -141,14 +141,14 @@ describe('GoogleBooksService', () => {
         expect(results[0].publicationDate).toBe('2020-01-01');
         expect(results[0].isbn).toBe('9781234567890');
         expect(results[0].coverImage).toBe('http://example.com/thumbnail.jpg');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should return empty array when API returns no items', (done) => {
+    it('should return empty array when API returns no items', () => {
       const mockResponse: GoogleBooksResponse = {
         totalItems: 0,
         items: []
@@ -156,31 +156,31 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results).toEqual([]);
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should return empty array when API returns undefined items', (done) => {
+    it('should return empty array when API returns undefined items', () => {
       const mockResponse: GoogleBooksResponse = {
         totalItems: 0
       };
 
       service.search('test').subscribe(results => {
         expect(results).toEqual([]);
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should handle API errors silently', (done) => {
+    it('should handle API errors silently', () => {
       service.search('test').subscribe(results => {
         expect(results).toEqual([]);
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
@@ -190,10 +190,10 @@ describe('GoogleBooksService', () => {
       });
     });
 
-    it('should handle network errors silently', (done) => {
+    it('should handle network errors silently', () => {
       service.search('test').subscribe(results => {
         expect(results).toEqual([]);
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
@@ -202,7 +202,7 @@ describe('GoogleBooksService', () => {
   });
 
   describe('author extraction', () => {
-    it('should return first author when single author', (done) => {
+    it('should return first author when single author', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -218,14 +218,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].author).toBe('Single Author');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should join multiple authors', (done) => {
+    it('should join multiple authors', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -241,14 +241,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].author).toBe('Author One, Author Two, Author Three');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should return "Unknown Author" when no authors', (done) => {
+    it('should return "Unknown Author" when no authors', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -264,14 +264,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].author).toBe('Unknown Author');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should return "Unknown Author" for empty authors array', (done) => {
+    it('should return "Unknown Author" for empty authors array', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -287,7 +287,7 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].author).toBe('Unknown Author');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
@@ -296,7 +296,7 @@ describe('GoogleBooksService', () => {
   });
 
   describe('ISBN extraction', () => {
-    it('should prefer ISBN_13 over ISBN_10', (done) => {
+    it('should prefer ISBN_13 over ISBN_10', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -315,14 +315,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].isbn).toBe('9780123456789');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should use ISBN_10 when ISBN_13 not available', (done) => {
+    it('should use ISBN_10 when ISBN_13 not available', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -340,14 +340,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].isbn).toBe('1234567890');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should return undefined when no ISBN available', (done) => {
+    it('should return undefined when no ISBN available', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -363,14 +363,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].isbn).toBeUndefined();
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should return undefined when identifiers array is empty', (done) => {
+    it('should return undefined when identifiers array is empty', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -386,7 +386,7 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].isbn).toBeUndefined();
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
@@ -395,7 +395,7 @@ describe('GoogleBooksService', () => {
   });
 
   describe('cover image extraction', () => {
-    it('should prefer thumbnail over smallThumbnail', (done) => {
+    it('should prefer thumbnail over smallThumbnail', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -414,14 +414,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].coverImage).toBe('http://example.com/large.jpg');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should use smallThumbnail when thumbnail not available', (done) => {
+    it('should use smallThumbnail when thumbnail not available', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -439,14 +439,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].coverImage).toBe('http://example.com/small.jpg');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should return undefined when no images available', (done) => {
+    it('should return undefined when no images available', () => {
       const volume: GoogleBooksVolume = {
         ...mockVolume,
         volumeInfo: {
@@ -462,7 +462,7 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].coverImage).toBeUndefined();
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
@@ -471,7 +471,7 @@ describe('GoogleBooksService', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle missing title', (done) => {
+    it('should handle missing title', () => {
       const volume: GoogleBooksVolume = {
         id: 'test-id',
         volumeInfo: {
@@ -487,14 +487,14 @@ describe('GoogleBooksService', () => {
 
       service.search('test').subscribe(results => {
         expect(results[0].title).toBe('Unknown Title');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should handle missing optional fields', (done) => {
+    it('should handle missing optional fields', () => {
       const volume: GoogleBooksVolume = {
         id: 'test-id',
         volumeInfo: {
@@ -515,14 +515,14 @@ describe('GoogleBooksService', () => {
         expect(results[0].publicationDate).toBeUndefined();
         expect(results[0].isbn).toBeUndefined();
         expect(results[0].coverImage).toBeUndefined();
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);
       req.flush(mockResponse);
     });
 
-    it('should handle multiple volumes in response', (done) => {
+    it('should handle multiple volumes in response', () => {
       const volume2: GoogleBooksVolume = {
         id: 'test-book-2',
         volumeInfo: {
@@ -540,7 +540,7 @@ describe('GoogleBooksService', () => {
         expect(results.length).toBe(2);
         expect(results[0].googleBooksId).toBe('test-book-id');
         expect(results[1].googleBooksId).toBe('test-book-2');
-        done();
+
       });
 
       const req = httpMock.expectOne(() => true);

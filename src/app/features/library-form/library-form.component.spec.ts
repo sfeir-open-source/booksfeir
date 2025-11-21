@@ -9,13 +9,14 @@ import {AuthMockService} from '../../core/services/mock/auth-mock.service';
 import {Library} from '../../core/models/library.model';
 import {User, UserRole} from '../../core/models/user.model';
 import {of, throwError} from 'rxjs';
+import {vi} from 'vitest';
 
 describe('LibraryFormComponent', () => {
   let component: LibraryFormComponent;
   let fixture: ComponentFixture<LibraryFormComponent>;
-  let libraryService: jasmine.SpyObj<LibraryService>;
-  let authService: jasmine.SpyObj<AuthMockService>;
-  let router: jasmine.SpyObj<Router>;
+  let libraryService: any;
+  let authService: any;
+  let router: any;
   let activatedRoute: any;
 
   const mockUser: User = {
@@ -40,21 +41,31 @@ describe('LibraryFormComponent', () => {
 
   beforeEach(async () => {
     // Create spy objects
-    const libraryServiceSpy = jasmine.createSpyObj('LibraryService', [
-      'create',
-      'update',
-      'getById'
-    ]);
+    const libraryServiceSpy = {
+      create: vi.fn(),
+      update: vi.fn(),
+      getById: vi.fn()
+    };
 
-    const authServiceSpy = jasmine.createSpyObj('AuthMockService', ['currentUser']);
-    authServiceSpy.currentUser.and.returnValue(mockUser);
+    const authServiceSpy = {
+      currentUser: vi.fn()
+    };
+    authServiceSpy.currentUser.mockReturnValue(mockUser);
 
-    const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    const routerSpy = {
+      navigate: vi.fn()
+    };
 
     activatedRoute = {
+      paramMap: of({
+        get: vi.fn().mockReturnValue(null),
+        has: vi.fn(),
+        getAll: vi.fn(),
+        keys: []
+      }),
       snapshot: {
         paramMap: {
-          get: jasmine.createSpy('get').and.returnValue(null)
+          get: vi.fn().mockReturnValue(null)
         }
       }
     };
@@ -75,9 +86,9 @@ describe('LibraryFormComponent', () => {
       ]
     }).compileComponents();
 
-    libraryService = TestBed.inject(LibraryService) as jasmine.SpyObj<LibraryService>;
-    authService = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
-    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
+    libraryService = TestBed.inject(LibraryService) as any;
+    authService = TestBed.inject(AuthMockService) as any;
+    router = TestBed.inject(Router) as any;
 
     fixture = TestBed.createComponent(LibraryFormComponent);
     component = fixture.componentInstance;
@@ -136,46 +147,147 @@ describe('LibraryFormComponent', () => {
   });
 
   describe('Edit Mode', () => {
-    beforeEach(() => {
-      activatedRoute.snapshot.paramMap.get = jasmine.createSpy('get').and.returnValue('lib-1');
-      libraryService.getById.and.returnValue(of(mockLibrary));
-    });
+    it('should load library data in edit mode', async () => {
+      libraryService.getById.mockReturnValue(of(mockLibrary));
 
-    it('should load library data in edit mode', () => {
-      fixture.detectChanges();
+      const editActivatedRoute = {
+        paramMap: of({
+          get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null),
+          has: vi.fn(),
+          getAll: vi.fn(),
+          keys: []
+        }),
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null)
+          }
+        }
+      };
 
-      expect(component.isEditMode()).toBe(true);
-      expect(component.libraryId()).toBe('lib-1');
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          LibraryFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      const editFixture = TestBed.createComponent(LibraryFormComponent);
+      const editComponent = editFixture.componentInstance;
+      editFixture.detectChanges();
+
+      expect(editComponent.isEditMode()).toBe(true);
+      expect(editComponent.libraryId()).toBe('lib-1');
       expect(libraryService.getById).toHaveBeenCalledWith('lib-1');
-      expect(component.form.get('name')?.value).toBe('Test Library');
-      expect(component.form.get('description')?.value).toBe('A test library');
-      expect(component.form.get('location')?.value).toBe('Test Location');
+      expect(editComponent.form.get('name')?.value).toBe('Test Library');
+      expect(editComponent.form.get('description')?.value).toBe('A test library');
+      expect(editComponent.form.get('location')?.value).toBe('Test Location');
     });
 
-    it('should set error when library not found', () => {
-      libraryService.getById.and.returnValue(of(null));
-      fixture.detectChanges();
+    it('should set error when library not found', async () => {
+      const libraryServiceLocal = {
+        create: vi.fn(),
+        update: vi.fn(),
+        getById: vi.fn().mockReturnValue(of(null))
+      };
 
-      expect(component.error()).toBe('Library not found');
+      const editActivatedRoute = {
+        paramMap: of({
+          get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null),
+          has: vi.fn(),
+          getAll: vi.fn(),
+          keys: []
+        }),
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null)
+          }
+        }
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          LibraryFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: LibraryService, useValue: libraryServiceLocal},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      const newFixture = TestBed.createComponent(LibraryFormComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+
+      // Force an additional change detection cycle for zoneless
+      newFixture.detectChanges();
+
+      expect(newComponent.error()).toBe('Library not found');
     });
 
-    it('should handle load errors gracefully', () => {
-      libraryService.getById.and.returnValue(throwError(() => new Error('Load failed')));
-      fixture.detectChanges();
+    it('should handle load errors gracefully', async () => {
+      const libraryServiceLocal = {
+        create: vi.fn(),
+        update: vi.fn(),
+        getById: vi.fn().mockReturnValue(throwError(() => new Error('Load failed')))
+      };
 
-      expect(component.error()).toBe('Failed to load library');
-      expect(component.isLoading()).toBe(false);
-    });
+      const editActivatedRoute = {
+        paramMap: of({
+          get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null),
+          has: vi.fn(),
+          getAll: vi.fn(),
+          keys: []
+        }),
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null)
+          }
+        }
+      };
 
-    it('should show loading indicator while loading', () => {
-      let resolveLoad: any;
-      const loadPromise = new Promise(resolve => { resolveLoad = resolve; });
-      libraryService.getById.and.returnValue(of(mockLibrary));
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          LibraryFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: LibraryService, useValue: libraryServiceLocal},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
 
-      fixture.detectChanges();
+      const newFixture = TestBed.createComponent(LibraryFormComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
 
-      // Loading should be true initially, false after load
-      expect(component.isLoading()).toBe(false); // Already loaded in sync test
+      // Force an additional change detection cycle for zoneless
+      newFixture.detectChanges();
+
+      expect(newComponent.error()).toBe('Failed to load library');
+      expect(newComponent.isLoading()).toBe(false);
     });
   });
 
@@ -197,7 +309,7 @@ describe('LibraryFormComponent', () => {
       expect(component.form.get('name')?.touched).toBe(true);
     });
 
-    it('should create library with valid form data', () => {
+    it('should create library with valid form data', async () => {
       const formValue = {
         name: 'New Library',
         description: 'New Description',
@@ -210,12 +322,13 @@ describe('LibraryFormComponent', () => {
         id: 'new-lib-1'
       };
 
-      libraryService.create.and.returnValue(of(createdLibrary));
+      libraryService.create.mockReturnValue(of(createdLibrary));
 
       component.form.patchValue(formValue);
       component.onSubmit();
+      await fixture.whenStable();
 
-      expect(libraryService.create).toHaveBeenCalledWith(jasmine.objectContaining({
+      expect(libraryService.create).toHaveBeenCalledWith(expect.objectContaining({
         name: 'New Library',
         description: 'New Description',
         location: 'New Location',
@@ -224,20 +337,21 @@ describe('LibraryFormComponent', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/library', 'new-lib-1']);
     });
 
-    it('should pass form values to service (trimming handled by service)', () => {
+    it('should pass form values to service (trimming handled by service)', async () => {
       const formValue = {
         name: '  Library With Spaces  ',
         description: '  Description With Spaces  ',
         location: '  Location With Spaces  '
       };
 
-      libraryService.create.and.returnValue(of({ ...mockLibrary, id: 'new-lib' }));
+      libraryService.create.mockReturnValue(of({...mockLibrary, id: 'new-lib'}));
 
       component.form.patchValue(formValue);
       component.onSubmit();
+      await fixture.whenStable();
 
       // Component passes form values as-is; service is responsible for trimming
-      expect(libraryService.create).toHaveBeenCalledWith(jasmine.objectContaining({
+      expect(libraryService.create).toHaveBeenCalledWith(expect.objectContaining({
         name: '  Library With Spaces  ',
         description: '  Description With Spaces  ',
         location: '  Location With Spaces  ',
@@ -245,8 +359,8 @@ describe('LibraryFormComponent', () => {
       }));
     });
 
-    it('should handle create errors gracefully', () => {
-      libraryService.create.and.returnValue(throwError(() => new Error('Create failed')));
+    it('should handle create errors gracefully', async () => {
+      libraryService.create.mockReturnValue(throwError(() => new Error('Create failed')));
 
       component.form.patchValue({
         name: 'Test Library',
@@ -255,13 +369,14 @@ describe('LibraryFormComponent', () => {
       });
 
       component.onSubmit();
+      await fixture.whenStable();
 
       expect(component.error()).toBe('Failed to create library');
       expect(component.isSaving()).toBe(false);
     });
 
     it('should show error if user is not authenticated', () => {
-      authService.currentUser.and.returnValue(null);
+      authService.currentUser.mockReturnValue(null);
 
       component.form.patchValue({
         name: 'Test Library',
@@ -277,28 +392,65 @@ describe('LibraryFormComponent', () => {
   });
 
   describe('Form Submission - Edit Mode', () => {
-    beforeEach(() => {
-      activatedRoute.snapshot.paramMap.get = jasmine.createSpy('get').and.returnValue('lib-1');
-      libraryService.getById.and.returnValue(of(mockLibrary));
-      fixture.detectChanges();
+    let editFixture: ComponentFixture<LibraryFormComponent>;
+    let editComponent: LibraryFormComponent;
+
+    beforeEach(async () => {
+      libraryService.getById.mockReturnValue(of(mockLibrary));
+
+      const editActivatedRoute = {
+        paramMap: of({
+          get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null),
+          has: vi.fn(),
+          getAll: vi.fn(),
+          keys: []
+        }),
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null)
+          }
+        }
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          LibraryFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      editFixture = TestBed.createComponent(LibraryFormComponent);
+      editComponent = editFixture.componentInstance;
+      editFixture.detectChanges();
     });
 
-    it('should update library with valid form data', () => {
+    it('should update library with valid form data', async () => {
       const updatedLibrary: Library = {
         ...mockLibrary,
         name: 'Updated Library',
         description: 'Updated Description'
       };
 
-      libraryService.update.and.returnValue(of(updatedLibrary));
+      libraryService.update.mockReturnValue(of(updatedLibrary));
 
-      component.form.patchValue({
+      editComponent.form.patchValue({
         name: 'Updated Library',
         description: 'Updated Description',
         location: 'Updated Location'
       });
 
-      component.onSubmit();
+      editComponent.onSubmit();
+      await editFixture.whenStable();
 
       expect(libraryService.update).toHaveBeenCalledWith('lib-1', {
         name: 'Updated Library',
@@ -308,17 +460,18 @@ describe('LibraryFormComponent', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/library', 'lib-1']);
     });
 
-    it('should handle update errors gracefully', () => {
-      libraryService.update.and.returnValue(throwError(() => new Error('Update failed')));
+    it('should handle update errors gracefully', async () => {
+      libraryService.update.mockReturnValue(throwError(() => new Error('Update failed')));
 
-      component.form.patchValue({
+      editComponent.form.patchValue({
         name: 'Updated Library'
       });
 
-      component.onSubmit();
+      editComponent.onSubmit();
+      await editFixture.whenStable();
 
-      expect(component.error()).toBe('Failed to update library');
-      expect(component.isSaving()).toBe(false);
+      expect(editComponent.error()).toBe('Failed to update library');
+      expect(editComponent.isSaving()).toBe(false);
     });
   });
 
@@ -331,12 +484,45 @@ describe('LibraryFormComponent', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/']);
     });
 
-    it('should navigate to library detail in edit mode', () => {
-      activatedRoute.snapshot.paramMap.get = jasmine.createSpy('get').and.returnValue('lib-1');
-      libraryService.getById.and.returnValue(of(mockLibrary));
-      fixture.detectChanges();
+    it('should navigate to library detail in edit mode', async () => {
+      libraryService.getById.mockReturnValue(of(mockLibrary));
 
-      component.onCancel();
+      const editActivatedRoute = {
+        paramMap: of({
+          get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null),
+          has: vi.fn(),
+          getAll: vi.fn(),
+          keys: []
+        }),
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'lib-1' : null)
+          }
+        }
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          LibraryFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      const editFixture = TestBed.createComponent(LibraryFormComponent);
+      const editComponent = editFixture.componentInstance;
+      editFixture.detectChanges();
+
+      editComponent.onCancel();
 
       expect(router.navigate).toHaveBeenCalledWith(['/library', 'lib-1']);
     });

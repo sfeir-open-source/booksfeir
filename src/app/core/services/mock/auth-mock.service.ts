@@ -44,7 +44,7 @@ export class AuthMockService {
     updatedBy: 'system'
   };
 
-  private readonly MOCK_CURRENT_USER = this.MOCK_LIBRARIAN
+  private readonly MOCK_CURRENT_USER = this.MOCK_ADMIN
 
   // Signal for current user (reactive state)
   private currentUserSignal = signal<User | null>(this.MOCK_CURRENT_USER);

@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
+import {Component, computed, inject, signal} from '@angular/core';
 import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ActivatedRoute, Router} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
@@ -27,7 +27,6 @@ import {AuthMockService} from '../../core/services/mock/auth-mock.service';
  */
 @Component({
   selector: 'sfeir-library-form',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatCardModule,
@@ -38,8 +37,7 @@ import {AuthMockService} from '../../core/services/mock/auth-mock.service';
     MatIconModule
   ],
   templateUrl: './library-form.component.html',
-  styleUrl: './library-form.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './library-form.component.scss'
 })
 export class LibraryFormComponent {
   private fb = inject(FormBuilder);

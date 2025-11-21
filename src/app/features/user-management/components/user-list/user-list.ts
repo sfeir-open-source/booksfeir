@@ -7,7 +7,7 @@
  * Feature: 002-user-role-management (T024-T028)
  */
 
-import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
+import {Component, computed, inject, signal} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {MatSnackBar, MatSnackBarModule} from '@angular/material/snack-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
@@ -39,7 +39,6 @@ import {RoleSelector} from '../role-selector/role-selector';
   ],
   templateUrl: './user-list.html',
   styleUrl: './user-list.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserList {
   private userRoleService = inject(UserRoleService);

@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
+import {Component, computed, inject, signal} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {MatCardModule} from '@angular/material/card';
@@ -34,7 +34,6 @@ import {ConfirmDialogComponent, ConfirmDialogData} from '../shared/dialogs/confi
  */
 @Component({
   selector: 'sfeir-library-detail',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,
@@ -46,8 +45,7 @@ import {ConfirmDialogComponent, ConfirmDialogData} from '../shared/dialogs/confi
     MatTooltipModule
   ],
   templateUrl: './library-detail.component.html',
-  styleUrl: './library-detail.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './library-detail.component.scss'
 })
 export class LibraryDetailComponent {
   private route = inject(ActivatedRoute);

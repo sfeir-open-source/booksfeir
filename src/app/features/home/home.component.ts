@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, linkedSignal} from '@angular/core';
+import {Component, computed, inject, linkedSignal} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {RouterLink} from '@angular/router';
 import {MatCardModule} from '@angular/material/card';
@@ -25,7 +25,6 @@ import {AuthMockService} from '../../core/services/mock/auth-mock.service';
  */
 @Component({
   selector: 'sfeir-home',
-  standalone: true,
   imports: [
     RouterLink,
     MatCardModule,
@@ -34,8 +33,7 @@ import {AuthMockService} from '../../core/services/mock/auth-mock.service';
     MatProgressSpinnerModule
   ],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './home.component.scss'
 })
 export class HomeComponent {
   private libraryService = inject(LibraryService);
@@ -45,7 +43,7 @@ export class HomeComponent {
   libraries = linkedSignal(this.libraryService.libraries);
 
   // User authentication state
-  rigthOfManage = computed(() => this.authService.rigthOfManage());
+  rigthOfManage = this.authService.rigthOfManage;
 
   // Subject to trigger library loading
   private loadLibrariesTrigger$ = new Subject<void>();

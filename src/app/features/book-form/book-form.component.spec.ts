@@ -11,14 +11,15 @@ import {Book, BookStatus} from '../../core/models/book.model';
 import {Library} from '../../core/models/library.model';
 import {User, UserRole} from '../../core/models/user.model';
 import {of, throwError} from 'rxjs';
+import {vi} from 'vitest';
 
 describe('BookFormComponent', () => {
   let component: BookFormComponent;
   let fixture: ComponentFixture<BookFormComponent>;
-  let bookService: jasmine.SpyObj<BookService>;
-  let libraryService: jasmine.SpyObj<LibraryService>;
-  let authService: jasmine.SpyObj<AuthMockService>;
-  let router: jasmine.SpyObj<Router>;
+  let bookService: any;
+  let libraryService: any;
+  let authService: any;
+  let router: any;
   let activatedRoute: any;
 
   const mockUser: User = {
@@ -58,28 +59,32 @@ describe('BookFormComponent', () => {
 
   beforeEach(async () => {
     // Create spy objects
-    const bookServiceSpy = jasmine.createSpyObj('BookService', [
-      'create',
-      'update',
-      'getById'
-    ]);
+    const bookServiceSpy = {
+      create: vi.fn(),
+      update: vi.fn(),
+      getById: vi.fn()
+    };
 
-    const libraryServiceSpy = jasmine.createSpyObj('LibraryService', [
-      'getAll'
-    ]);
+    const libraryServiceSpy = {
+      getAll: vi.fn()
+    };
 
-    const authServiceSpy = jasmine.createSpyObj('AuthMockService', ['currentUser']);
-    authServiceSpy.currentUser.and.returnValue(mockUser);
+    const authServiceSpy = {
+      currentUser: vi.fn()
+    };
+    authServiceSpy.currentUser.mockReturnValue(mockUser);
 
-    const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    const routerSpy = {
+      navigate: vi.fn()
+    };
 
     activatedRoute = {
       snapshot: {
         paramMap: {
-          get: jasmine.createSpy('get').and.returnValue(null)
+          get: vi.fn().mockReturnValue(null)
         },
         queryParamMap: {
-          get: jasmine.createSpy('get').and.returnValue(null)
+          get: vi.fn().mockReturnValue(null)
         }
       }
     };
@@ -101,13 +106,13 @@ describe('BookFormComponent', () => {
       ]
     }).compileComponents();
 
-    bookService = TestBed.inject(BookService) as jasmine.SpyObj<BookService>;
-    libraryService = TestBed.inject(LibraryService) as jasmine.SpyObj<LibraryService>;
-    authService = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
-    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
+    bookService = TestBed.inject(BookService) as any;
+    libraryService = TestBed.inject(LibraryService) as any;
+    authService = TestBed.inject(AuthMockService) as any;
+    router = TestBed.inject(Router) as any;
 
     // Default library service response
-    libraryService.getAll.and.returnValue(of([mockLibrary]));
+    libraryService.getAll.mockReturnValue(of([mockLibrary]));
 
     fixture = TestBed.createComponent(BookFormComponent);
     component = fixture.componentInstance;
@@ -132,14 +137,43 @@ describe('BookFormComponent', () => {
       expect(component.isEditMode()).toBe(false);
     });
 
-    it('should initialize form with libraryId from query params', () => {
-      activatedRoute.snapshot.queryParamMap.get = jasmine.createSpy('get')
-        .and.callFake((key: string) => key === 'libraryId' ? 'lib-1' : null);
+    it('should initialize form with libraryId from query params', async () => {
+      // Reconfigure with new route params
+      const newActivatedRoute = {
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockReturnValue(null)
+          },
+          queryParamMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'libraryId' ? 'lib-1' : null)
+          }
+        }
+      };
 
-      fixture.detectChanges();
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          BookFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: BookService, useValue: bookService},
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: newActivatedRoute}
+        ]
+      }).compileComponents();
 
-      expect(component.form.get('libraryId')?.value).toBe('lib-1');
-      expect(component.libraryId()).toBe('lib-1');
+      const newFixture = TestBed.createComponent(BookFormComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+
+      expect(newComponent.form.get('libraryId')?.value).toBe('lib-1');
+      expect(newComponent.libraryId()).toBe('lib-1');
     });
 
     it('should mark required fields correctly', () => {
@@ -211,44 +245,80 @@ describe('BookFormComponent', () => {
       expect(component.libraries()).toEqual([mockLibrary]);
     });
 
-    it('should handle library load errors gracefully', () => {
-      libraryService.getAll.and.returnValue(throwError(() => new Error('Load failed')));
+    it('should handle library load errors gracefully', async () => {
+      libraryService.getAll.mockReturnValue(throwError(() => new Error('Load failed')));
 
-      fixture.detectChanges();
+      const errorFixture = TestBed.createComponent(BookFormComponent);
+      errorFixture.detectChanges();
+      await errorFixture.whenStable();
 
-      expect(component.error()).toBe('Failed to load libraries');
+      expect(errorFixture.componentInstance.error()).toBe('Failed to load libraries');
     });
   });
 
   describe('Edit Mode', () => {
-    beforeEach(() => {
-      activatedRoute.snapshot.paramMap.get = jasmine.createSpy('get').and.returnValue('book-1');
-      bookService.getById.and.returnValue(of(mockBook));
+    let editFixture: ComponentFixture<BookFormComponent>;
+    let editComponent: BookFormComponent;
+
+    beforeEach(async () => {
+      bookService.getById.mockReturnValue(of(mockBook));
+
+      const editActivatedRoute = {
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'book-1' : null)
+          },
+          queryParamMap: {
+            get: vi.fn().mockReturnValue(null)
+          }
+        }
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          BookFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: BookService, useValue: bookService},
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      editFixture = TestBed.createComponent(BookFormComponent);
+      editComponent = editFixture.componentInstance;
     });
 
     it('should load book data in edit mode', () => {
-      fixture.detectChanges();
+      editFixture.detectChanges();
 
-      expect(component.isEditMode()).toBe(true);
-      expect(component.bookId()).toBe('book-1');
+      expect(editComponent.isEditMode()).toBe(true);
+      expect(editComponent.bookId()).toBe('book-1');
       expect(bookService.getById).toHaveBeenCalledWith('book-1');
-      expect(component.form.get('libraryId')?.value).toBe('lib-1');
-      expect(component.form.get('title')?.value).toBe('Test Book');
-      expect(component.form.get('author')?.value).toBe('Test Author');
-      expect(component.form.get('edition')?.value).toBe('First Edition');
-      expect(component.form.get('publicationDate')?.value).toBe('2024');
-      expect(component.form.get('isbn')?.value).toBe('978-0123456789');
-      expect(component.form.get('coverImage')?.value).toBe('https://example.com/cover.jpg');
+      expect(editComponent.form.get('libraryId')?.value).toBe('lib-1');
+      expect(editComponent.form.get('title')?.value).toBe('Test Book');
+      expect(editComponent.form.get('author')?.value).toBe('Test Author');
+      expect(editComponent.form.get('edition')?.value).toBe('First Edition');
+      expect(editComponent.form.get('publicationDate')?.value).toBe('2024');
+      expect(editComponent.form.get('isbn')?.value).toBe('978-0123456789');
+      expect(editComponent.form.get('coverImage')?.value).toBe('https://example.com/cover.jpg');
     });
 
     it('should disable library selection in edit mode', () => {
-      fixture.detectChanges();
+      editFixture.detectChanges();
 
-      const libraryIdControl = component.form.get('libraryId');
+      const libraryIdControl = editComponent.form.get('libraryId');
       expect(libraryIdControl?.disabled).toBe(true);
     });
 
-    it('should handle book with optional fields missing', () => {
+    it('should handle book with optional fields missing', async () => {
       const bookWithoutOptionals: Book = {
         ...mockBook,
         edition: undefined,
@@ -256,29 +326,124 @@ describe('BookFormComponent', () => {
         isbn: undefined,
         coverImage: undefined
       };
-      bookService.getById.and.returnValue(of(bookWithoutOptionals));
+      bookService.getById.mockReturnValue(of(bookWithoutOptionals));
 
-      fixture.detectChanges();
+      const editActivatedRoute = {
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'book-1' : null)
+          },
+          queryParamMap: {
+            get: vi.fn().mockReturnValue(null)
+          }
+        }
+      };
 
-      expect(component.form.get('edition')?.value).toBe('');
-      expect(component.form.get('publicationDate')?.value).toBe('');
-      expect(component.form.get('isbn')?.value).toBe('');
-      expect(component.form.get('coverImage')?.value).toBe('');
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          BookFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: BookService, useValue: bookService},
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      const newFixture = TestBed.createComponent(BookFormComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+
+      expect(newComponent.form.get('edition')?.value).toBe('');
+      expect(newComponent.form.get('publicationDate')?.value).toBe('');
+      expect(newComponent.form.get('isbn')?.value).toBe('');
+      expect(newComponent.form.get('coverImage')?.value).toBe('');
     });
 
-    it('should set error when book not found', () => {
-      bookService.getById.and.returnValue(of(null));
-      fixture.detectChanges();
+    it('should set error when book not found', async () => {
+      bookService.getById.mockReturnValue(of(null));
 
-      expect(component.error()).toBe('Book not found');
+      const editActivatedRoute = {
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'book-1' : null)
+          },
+          queryParamMap: {
+            get: vi.fn().mockReturnValue(null)
+          }
+        }
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          BookFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: BookService, useValue: bookService},
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      const newFixture = TestBed.createComponent(BookFormComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+
+      expect(newComponent.error()).toBe('Book not found');
     });
 
-    it('should handle load errors gracefully', () => {
-      bookService.getById.and.returnValue(throwError(() => new Error('Load failed')));
-      fixture.detectChanges();
+    it('should handle load errors gracefully', async () => {
+      bookService.getById.mockReturnValue(throwError(() => new Error('Load failed')));
 
-      expect(component.error()).toBe('Failed to load book');
-      expect(component.isLoading()).toBe(false);
+      const editActivatedRoute = {
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'book-1' : null)
+          },
+          queryParamMap: {
+            get: vi.fn().mockReturnValue(null)
+          }
+        }
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          BookFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: BookService, useValue: bookService},
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      const newFixture = TestBed.createComponent(BookFormComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+
+      expect(newComponent.error()).toBe('Failed to load book');
+      expect(newComponent.isLoading()).toBe(false);
     });
   });
 
@@ -300,7 +465,7 @@ describe('BookFormComponent', () => {
       expect(component.form.get('title')?.touched).toBe(true);
     });
 
-    it('should create book with valid form data', () => {
+    it('should create book with valid form data', async () => {
       const formValue = {
         libraryId: 'lib-1',
         title: 'New Book',
@@ -317,12 +482,13 @@ describe('BookFormComponent', () => {
         id: 'new-book-1'
       };
 
-      bookService.create.and.returnValue(of(createdBook));
+      bookService.create.mockReturnValue(of(createdBook));
 
       component.form.patchValue(formValue);
       component.onSubmit();
+      await fixture.whenStable();
 
-      expect(bookService.create).toHaveBeenCalledWith('lib-1', jasmine.objectContaining({
+      expect(bookService.create).toHaveBeenCalledWith('lib-1', {
         title: 'New Book',
         author: 'New Author',
         edition: 'First Edition',
@@ -330,11 +496,11 @@ describe('BookFormComponent', () => {
         isbn: '978-0123456789',
         coverImage: 'https://example.com/cover.jpg',
         addedBy: 'mock-user-1'
-      }));
-      expect(router.navigate).toHaveBeenCalledWith(['/library', 'lib-1']);
+      });
+      expect(router.navigate).toHaveBeenCalledWith(['/library/lib-1']);
     });
 
-    it('should create book with only required fields', () => {
+    it('should create book with only required fields', async () => {
       const formValue = {
         libraryId: 'lib-1',
         title: 'Minimal Book',
@@ -352,21 +518,22 @@ describe('BookFormComponent', () => {
         id: 'new-book-2'
       };
 
-      bookService.create.and.returnValue(of(createdBook));
+      bookService.create.mockReturnValue(of(createdBook));
 
       component.form.patchValue(formValue);
       component.onSubmit();
+      await fixture.whenStable();
 
-      expect(bookService.create).toHaveBeenCalledWith('lib-1', jasmine.objectContaining({
+      expect(bookService.create).toHaveBeenCalledWith('lib-1', {
         title: 'Minimal Book',
         author: 'Minimal Author',
         addedBy: 'mock-user-1'
-      }));
-      expect(router.navigate).toHaveBeenCalledWith(['/library', 'lib-1']);
+      });
+      expect(router.navigate).toHaveBeenCalledWith(['/library/lib-1']);
     });
 
-    it('should handle create errors gracefully', () => {
-      bookService.create.and.returnValue(throwError(() => new Error('Create failed')));
+    it('should handle create errors gracefully', async () => {
+      bookService.create.mockReturnValue(throwError(() => new Error('Create failed')));
 
       component.form.patchValue({
         libraryId: 'lib-1',
@@ -375,13 +542,14 @@ describe('BookFormComponent', () => {
       });
 
       component.onSubmit();
+      await fixture.whenStable();
 
       expect(component.error()).toBe('Failed to create book');
       expect(component.isSaving()).toBe(false);
     });
 
     it('should show error if user is not authenticated', () => {
-      authService.currentUser.and.returnValue(null);
+      authService.currentUser.mockReturnValue(null);
 
       component.form.patchValue({
         libraryId: 'lib-1',
@@ -397,30 +565,65 @@ describe('BookFormComponent', () => {
   });
 
   describe('Form Submission - Edit Mode', () => {
-    beforeEach(() => {
-      activatedRoute.snapshot.paramMap.get = jasmine.createSpy('get').and.returnValue('book-1');
-      bookService.getById.and.returnValue(of(mockBook));
-      fixture.detectChanges();
+    let editFixture: ComponentFixture<BookFormComponent>;
+    let editComponent: BookFormComponent;
+
+    beforeEach(async () => {
+      bookService.getById.mockReturnValue(of(mockBook));
+
+      const editActivatedRoute = {
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'book-1' : null)
+          },
+          queryParamMap: {
+            get: vi.fn().mockReturnValue(null)
+          }
+        }
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          BookFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: BookService, useValue: bookService},
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      editFixture = TestBed.createComponent(BookFormComponent);
+      editComponent = editFixture.componentInstance;
+      editFixture.detectChanges();
     });
 
-    it('should update book with valid form data', () => {
+    it('should update book with valid form data', async () => {
       const updatedBook: Book = {
         ...mockBook,
         title: 'Updated Book',
         author: 'Updated Author'
       };
 
-      bookService.update.and.returnValue(of(updatedBook));
+      bookService.update.mockReturnValue(of(updatedBook));
 
-      component.form.patchValue({
+      editComponent.form.patchValue({
         title: 'Updated Book',
         author: 'Updated Author',
         edition: 'Second Edition'
       });
 
-      component.onSubmit();
+      editComponent.onSubmit();
+      await editFixture.whenStable();
 
-      expect(bookService.update).toHaveBeenCalledWith('book-1', jasmine.objectContaining({
+      expect(bookService.update).toHaveBeenCalledWith('book-1', {
         libraryId: 'lib-1',
         title: 'Updated Book',
         author: 'Updated Author',
@@ -428,41 +631,44 @@ describe('BookFormComponent', () => {
         publicationDate: '2024',
         isbn: '978-0123456789',
         coverImage: 'https://example.com/cover.jpg'
-      }));
-      expect(router.navigate).toHaveBeenCalledWith(['/library', 'lib-1']);
+      });
+      expect(router.navigate).toHaveBeenCalledWith(['/library/lib-1']);
     });
 
-    it('should include disabled libraryId in update using getRawValue', () => {
+    it('should include disabled libraryId in update using getRawValue', async () => {
       const updatedBook: Book = {
         ...mockBook,
         title: 'Updated Book'
       };
 
-      bookService.update.and.returnValue(of(updatedBook));
+      bookService.update.mockReturnValue(of(updatedBook));
 
-      component.form.patchValue({
+      editComponent.form.patchValue({
         title: 'Updated Book'
       });
 
-      component.onSubmit();
+      editComponent.onSubmit();
+      await editFixture.whenStable();
 
       // getRawValue() should include disabled fields
-      expect(bookService.update).toHaveBeenCalledWith('book-1', jasmine.objectContaining({
-        libraryId: 'lib-1'
+      expect(bookService.update).toHaveBeenCalledWith('book-1', expect.objectContaining({
+        libraryId: 'lib-1',
+        title: 'Updated Book'
       }));
     });
 
-    it('should handle update errors gracefully', () => {
-      bookService.update.and.returnValue(throwError(() => new Error('Update failed')));
+    it('should handle update errors gracefully', async () => {
+      bookService.update.mockReturnValue(throwError(() => new Error('Update failed')));
 
-      component.form.patchValue({
+      editComponent.form.patchValue({
         title: 'Updated Book'
       });
 
-      component.onSubmit();
+      editComponent.onSubmit();
+      await editFixture.whenStable();
 
-      expect(component.error()).toBe('Failed to update book');
-      expect(component.isSaving()).toBe(false);
+      expect(editComponent.error()).toBe('Failed to update book');
+      expect(editComponent.isSaving()).toBe(false);
     });
   });
 
@@ -527,12 +733,43 @@ describe('BookFormComponent', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/']);
     });
 
-    it('should navigate to library detail in edit mode', () => {
-      activatedRoute.snapshot.paramMap.get = jasmine.createSpy('get').and.returnValue('book-1');
-      bookService.getById.and.returnValue(of(mockBook));
-      fixture.detectChanges();
+    it('should navigate to library detail in edit mode', async () => {
+      bookService.getById.mockReturnValue(of(mockBook));
 
-      component.onCancel();
+      const editActivatedRoute = {
+        snapshot: {
+          paramMap: {
+            get: vi.fn().mockImplementation((key: string) => key === 'id' ? 'book-1' : null)
+          },
+          queryParamMap: {
+            get: vi.fn().mockReturnValue(null)
+          }
+        }
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [
+          BookFormComponent,
+          ReactiveFormsModule,
+          NoopAnimationsModule
+        ],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {provide: BookService, useValue: bookService},
+          {provide: LibraryService, useValue: libraryService},
+          {provide: AuthMockService, useValue: authService},
+          {provide: Router, useValue: router},
+          {provide: ActivatedRoute, useValue: editActivatedRoute}
+        ]
+      }).compileComponents();
+
+      const editFixture = TestBed.createComponent(BookFormComponent);
+      const editComponent = editFixture.componentInstance;
+      editFixture.detectChanges();
+
+      editComponent.onCancel();
 
       expect(router.navigate).toHaveBeenCalledWith(['/library', 'lib-1']);
     });

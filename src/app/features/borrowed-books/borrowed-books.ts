@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, effect, inject, signal} from '@angular/core';
+import {Component, computed, effect, inject, signal} from '@angular/core';
 import {toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {Router} from '@angular/router';
 import {MatCardModule} from '@angular/material/card';
@@ -28,7 +28,6 @@ import {catchError, combineLatest, filter, map, of, switchMap, tap} from 'rxjs';
  */
 @Component({
   selector: 'sfeir-borrowed-books',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,
@@ -39,8 +38,7 @@ import {catchError, combineLatest, filter, map, of, switchMap, tap} from 'rxjs';
     MatDialogModule
   ],
   templateUrl: './borrowed-books.html',
-  styleUrl: './borrowed-books.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './borrowed-books.scss'
 })
 export class BorrowedBooksComponent {
   private router = inject(Router);
@@ -68,7 +66,8 @@ export class BorrowedBooksComponent {
         }
         return this.borrowService.getUserBorrowsWithDetails(user.id).pipe(
           map(transactions => ({data: transactions, error: null})),
-          catchError(() => of({data: [], error: 'Failed to load borrowed books'}))
+          catchError(() => of({data: [], error: 'Failed to load borrowed books'})),
+          tap(() => this.isLoaded.set(true))
         );
       })
     ),
@@ -97,7 +96,8 @@ export class BorrowedBooksComponent {
   });
 
   error = computed(() => this.allTransactions()?.error || null);
-  isLoading = computed(() => !this.allTransactions());
+  isLoaded = signal(false);
+  isLoading = computed(() => !this.isLoaded());
 
   constructor() {
     // Effect to handle post-return actions

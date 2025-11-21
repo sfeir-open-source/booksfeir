@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, effect, inject, signal} from '@angular/core';
+import {Component, computed, effect, inject, signal} from '@angular/core';
 import {toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ActivatedRoute, Router} from '@angular/router';
@@ -31,7 +31,6 @@ import {catchError, filter, map, of, switchMap} from 'rxjs';
  */
 @Component({
   selector: 'sfeir-book-form',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatCardModule,
@@ -43,8 +42,7 @@ import {catchError, filter, map, of, switchMap} from 'rxjs';
     MatSelectModule
   ],
   templateUrl: './book-form.component.html',
-  styleUrl: './book-form.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './book-form.component.scss'
 })
 export class BookFormComponent {
   private fb = inject(FormBuilder);
@@ -57,11 +55,16 @@ export class BookFormComponent {
   form!: FormGroup;
   bookId = signal<string | null>(null);
   libraryId = signal<string | null>(null);
+  error = signal<string | null>(null);
+  isSaving = signal(false);
 
   // Load libraries using toSignal
   libraries = toSignal(
     this.libraryService.getAll().pipe(
-      catchError(() => of([]))
+      catchError(() => {
+        this.error.set('Failed to load libraries');
+        return of([]);
+      })
     ),
     {initialValue: []}
   );
@@ -117,8 +120,6 @@ export class BookFormComponent {
   isLoading = computed(() => this.bookData()?.loading || false);
 
   // Writable signals for form state
-  isSaving = signal(false);
-  error = signal<string | null>(null);
 
   constructor() {
     // Initialize form once
@@ -127,7 +128,16 @@ export class BookFormComponent {
 
     // Update form when book data changes
     effect(() => {
-      const book = this.bookData()?.data;
+      const bookDataResult = this.bookData();
+      if (bookDataResult?.error) {
+        this.error.set(bookDataResult.error);
+        return;
+      }
+      const book = bookDataResult?.data;
+      if (book === null && this.bookId()) {
+        this.error.set('Book not found');
+        return;
+      }
       if (book && this.form) {
         this.libraryId.set(book.libraryId);
         this.form.patchValue({
@@ -203,11 +213,22 @@ export class BookFormComponent {
 
     const formValue = this.form.getRawValue(); // getRawValue() includes disabled fields
 
+    // Filter out empty optional fields for create mode
+    const cleanedData: any = {...formValue};
+    if (!this.isEditMode()) {
+      const optionalFields = ['edition', 'publicationDate', 'isbn', 'coverImage'];
+      optionalFields.forEach(field => {
+        if (!cleanedData[field]) {
+          delete cleanedData[field];
+        }
+      });
+    }
+
     // Trigger save operation via signal
     if (this.isEditMode()) {
       this.saveTrigger.set({action: 'update', data: formValue});
     } else {
-      this.saveTrigger.set({action: 'create', data: formValue});
+      this.saveTrigger.set({action: 'create', data: cleanedData});
     }
   }
 

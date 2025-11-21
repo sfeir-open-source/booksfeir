@@ -1,9 +1,9 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { AuthMockService } from '../../../core/services/mock/auth-mock.service';
+import {Component, inject} from '@angular/core';
+import {RouterLink, RouterLinkActive} from '@angular/router';
+import {MatToolbarModule} from '@angular/material/toolbar';
+import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {AuthMockService} from '../../../core/services/mock/auth-mock.service';
 import {MatListItemAvatar} from '@angular/material/list';
 
 /**
@@ -21,7 +21,6 @@ import {MatListItemAvatar} from '@angular/material/list';
  */
 @Component({
   selector: 'sfeir-navigation',
-  standalone: true,
   imports: [
     RouterLink,
     RouterLinkActive,
@@ -218,8 +217,7 @@ import {MatListItemAvatar} from '@angular/material/list';
         gap: 4px;
       }
     }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  `]
 })
 export class NavigationComponent {
   private authService = inject(AuthMockService);

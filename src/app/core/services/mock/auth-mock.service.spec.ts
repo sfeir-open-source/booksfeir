@@ -84,44 +84,44 @@ describe('AuthMockService', () => {
   });
 
   describe('getCurrentUser', () => {
-    it('should return current user as Observable', (done) => {
+    it('should return current user as Observable', () => {
       service.getCurrentUser().subscribe(user => {
         expect(user).toBeTruthy();
         expect(user?.id).toBe('admin1');
-        done();
+
       });
     });
 
-    it('should return null when logged out', (done) => {
+    it('should return null when logged out', () => {
       service.logout().subscribe();
 
       service.getCurrentUser().subscribe(user => {
         expect(user).toBeNull();
-        done();
+
       });
     });
   });
 
   describe('checkAuth', () => {
-    it('should return true when authenticated', (done) => {
+    it('should return true when authenticated', () => {
       service.checkAuth().subscribe(isAuth => {
         expect(isAuth).toBe(true);
-        done();
+
       });
     });
 
-    it('should return false when not authenticated', (done) => {
+    it('should return false when not authenticated', () => {
       service.logout().subscribe();
 
       service.checkAuth().subscribe(isAuth => {
         expect(isAuth).toBe(false);
-        done();
+
       });
     });
   });
 
   describe('login', () => {
-    it('should set current user', (done) => {
+    it('should set current user', () => {
       service.logout().subscribe();
       expect(service.currentUser()).toBeNull();
 
@@ -129,26 +129,26 @@ describe('AuthMockService', () => {
         expect(user).toBeTruthy();
         expect(service.currentUser()).toBeTruthy();
         expect(service.isAuthenticated()).toBe(true);
-        done();
+
       });
     });
 
-    it('should always return mock user regardless of email', (done) => {
+    it('should always return mock user regardless of email', () => {
       service.login('any-email@example.com').subscribe(user => {
         expect(user.email).toBe('admin@booksfeir.com');
-        done();
+
       });
     });
   });
 
   describe('logout', () => {
-    it('should clear current user', (done) => {
+    it('should clear current user', () => {
       expect(service.currentUser()).toBeTruthy();
 
       service.logout().subscribe(() => {
         expect(service.currentUser()).toBeNull();
         expect(service.isAuthenticated()).toBe(false);
-        done();
+
       });
     });
   });

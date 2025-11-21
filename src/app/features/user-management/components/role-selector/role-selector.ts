@@ -7,7 +7,7 @@
  * Feature: 002-user-role-management (T020, T021)
  */
 
-import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
+import {Component, input, output} from '@angular/core';
 import {MatSelectModule} from '@angular/material/select';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {UserRole} from '../../../../core/models/user.model';
@@ -17,7 +17,6 @@ import {UserRole} from '../../../../core/models/user.model';
   imports: [MatSelectModule, MatFormFieldModule],
   templateUrl: './role-selector.html',
   styleUrl: './role-selector.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class.role-selector]': 'true',
     '[class.disabled]': 'disabled()'

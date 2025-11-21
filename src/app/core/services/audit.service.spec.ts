@@ -15,15 +15,20 @@ import {AuditService} from './audit.service';
 import {DatastoreService} from './datastore.service';
 import {UserRole} from '../models/user.model';
 import {AuditEntry} from '../models/audit-entry.model';
+import {vi} from 'vitest';
 
 describe('AuditService', () => {
   let service: AuditService;
-  let datastoreService: jasmine.SpyObj<DatastoreService>;
+  let datastoreService: any;
   let mockAuditEntries: AuditEntry[];
 
   beforeEach(() => {
     // Create spy for DatastoreService
-    const datastoreSpy = jasmine.createSpyObj('DatastoreService', ['save', 'query', 'batchDelete']);
+    const datastoreSpy = {
+      save: vi.fn(),
+      query: vi.fn(),
+      batchDelete: vi.fn()
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -34,7 +39,7 @@ describe('AuditService', () => {
     });
 
     service = TestBed.inject(AuditService);
-    datastoreService = TestBed.inject(DatastoreService) as jasmine.SpyObj<DatastoreService>;
+    datastoreService = TestBed.inject(DatastoreService) as any;
 
     // Setup mock audit entries with recent dates
     const now = new Date();
@@ -79,7 +84,7 @@ describe('AuditService', () => {
 
   describe('logRoleChange', () => {
     it('should create and save audit entry', async () => {
-      datastoreService.save.and.resolveTo();
+      datastoreService.save.mockResolvedValue(undefined);
 
       const result = await service.logRoleChange(
         'user1',
@@ -95,11 +100,11 @@ describe('AuditService', () => {
       expect(result.changedBy).toBe('admin1');
       expect(result.action).toBe('role_change');
       expect(result.timestamp).toBeInstanceOf(Date);
-      expect(datastoreService.save).toHaveBeenCalledWith('AuditEntry', jasmine.any(Object));
+      expect(datastoreService.save).toHaveBeenCalledWith('AuditEntry', expect.any(Object));
     });
 
     it('should generate unique audit entry IDs', async () => {
-      datastoreService.save.and.resolveTo();
+      datastoreService.save.mockResolvedValue(undefined);
 
       const entry1 = await service.logRoleChange('user1', UserRole.USER, UserRole.LIBRARIAN, 'admin1');
       const entry2 = await service.logRoleChange('user2', UserRole.USER, UserRole.ADMIN, 'admin1');
@@ -110,7 +115,7 @@ describe('AuditService', () => {
 
   describe('getAuditTrail', () => {
     it('should return audit entries for specific user sorted by timestamp desc', async () => {
-      datastoreService.query.and.resolveTo(mockAuditEntries);
+      datastoreService.query.mockResolvedValue(mockAuditEntries);
 
       const result = await service.getAuditTrail('user1');
 
@@ -121,7 +126,7 @@ describe('AuditService', () => {
     });
 
     it('should return empty array if user has no audit entries', async () => {
-      datastoreService.query.and.resolveTo(mockAuditEntries);
+      datastoreService.query.mockResolvedValue(mockAuditEntries);
 
       const result = await service.getAuditTrail('user999');
 
@@ -131,7 +136,7 @@ describe('AuditService', () => {
 
   describe('getAllAuditEntries', () => {
     it('should return all audit entries sorted by timestamp desc', async () => {
-      datastoreService.query.and.resolveTo(mockAuditEntries);
+      datastoreService.query.mockResolvedValue(mockAuditEntries);
 
       const result = await service.getAllAuditEntries();
 
@@ -142,7 +147,7 @@ describe('AuditService', () => {
     });
 
     it('should respect limit parameter', async () => {
-      datastoreService.query.and.resolveTo(mockAuditEntries);
+      datastoreService.query.mockResolvedValue(mockAuditEntries);
 
       const result = await service.getAllAuditEntries(2);
 
@@ -159,7 +164,7 @@ describe('AuditService', () => {
         changedBy: 'admin1',
         timestamp: new Date()
       }));
-      datastoreService.query.and.resolveTo(manyEntries);
+      datastoreService.query.mockResolvedValue(manyEntries);
 
       const result = await service.getAllAuditEntries();
 
@@ -186,8 +191,8 @@ describe('AuditService', () => {
         }
       ];
 
-      datastoreService.query.and.resolveTo(entriesWithOld);
-      datastoreService.batchDelete.and.resolveTo();
+      datastoreService.query.mockResolvedValue(entriesWithOld);
+      datastoreService.batchDelete.mockResolvedValue(undefined);
 
       const deletedCount = await service.cleanupOldEntries();
 
@@ -196,7 +201,7 @@ describe('AuditService', () => {
     });
 
     it('should return 0 if no old entries exist', async () => {
-      datastoreService.query.and.resolveTo(mockAuditEntries);
+      datastoreService.query.mockResolvedValue(mockAuditEntries);
 
       const deletedCount = await service.cleanupOldEntries();
 
@@ -232,15 +237,15 @@ describe('AuditService', () => {
         }
       ];
 
-      datastoreService.query.and.resolveTo(entriesWithMultipleOld);
-      datastoreService.batchDelete.and.resolveTo();
+      datastoreService.query.mockResolvedValue(entriesWithMultipleOld);
+      datastoreService.batchDelete.mockResolvedValue(undefined);
 
       const deletedCount = await service.cleanupOldEntries();
 
       expect(deletedCount).toBe(2);
       expect(datastoreService.batchDelete).toHaveBeenCalledWith(
         'AuditEntry',
-        jasmine.arrayContaining(['audit-old-1', 'audit-old-2'])
+        expect.arrayContaining(['audit-old-1', 'audit-old-2'])
       );
     });
   });

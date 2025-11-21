@@ -1,16 +1,25 @@
 <!--
 Sync Impact Report:
-- Version change: 1.3.0 → 1.3.1
-- Modified principles: None
+- Version change: 1.3.1 → 2.0.0
+- Modified principles:
+  - Principle V: "Comprehensive Testing" - Changed from Karma/Jasmine to Vitest (BREAKING CHANGE)
 - Added sections:
-  - Technology Constraints expanded with External APIs (Google Books API v1)
-- Removed sections: None
+  - Technology Constraints: Vitest testing framework mandate with @analogjs/vitest-angular
+  - Development Workflow: Vitest-specific testing standards
+- Removed sections:
+  - Technology Constraints: Karma and Jasmine references removed
 - Templates requiring updates:
-  ✅ plan-template.md - reviewed, no updates needed (constitution check is flexible)
-  ✅ spec-template.md - reviewed, no updates needed (technology-agnostic by design)
-  ✅ tasks-template.md - reviewed, no updates needed (implementation-focused)
-  ✅ .claude/commands/speckit.*.md - reviewed, no agent-specific references (generic guidance maintained)
-- Follow-up TODOs: None
+  ✅ plan-template.md - reviewed, constitution check is flexible enough to accommodate
+  ✅ spec-template.md - reviewed, technology-agnostic by design
+  ✅ tasks-template.md - reviewed, test task structure remains valid
+  ⚠ Commands in .specify/templates/commands/ - directory not found, skipped
+- Follow-up TODOs:
+  - Migration from Karma/Jasmine to Vitest required for existing tests
+  - Update package.json dependencies
+  - Create vite.config.ts for Vitest configuration
+  - Update tsconfig.spec.json for Vitest types
+  - Update angular.json test builder
+  - Create new test-setup.ts for zoneless mode
 -->
 
 # Booksfeir Constitution
@@ -65,19 +74,20 @@ All UI components MUST:
 
 **Rationale**: Angular Material provides battle-tested, accessible components that ensure consistency and reduce development time. Material Design creates a cohesive, professional user experience.
 
-### V. Comprehensive Testing (NON-NEGOTIABLE)
+### V. Comprehensive Testing with Vitest (NON-NEGOTIABLE)
 
-All code MUST be tested:
+All code MUST be tested using Vitest exclusively:
 - Unit tests for all components, services, and utilities (minimum 80% coverage)
 - Integration tests for critical user workflows
 - Component tests using Angular Testing Library patterns and component harnesses
 - Test-Driven Development (TDD) recommended: write tests before implementation when feasible
 - Tests MUST be readable, maintainable, and fast (<5s per test suite)
-- Use Karma test runner with Jasmine testing framework
+- Use Vitest test runner with `@analogjs/vitest-angular` integration
 - Mock external dependencies appropriately
 - Leverage Angular Testing utilities (`TestBed`, component harnesses, fixtures)
+- Configure tests for zoneless mode using `@analogjs/vitest-angular/setup-snapshots`
 
-**Rationale**: Comprehensive testing prevents regressions, documents expected behavior, enables confident refactoring, and reduces production bugs. Karma with Jasmine provides Angular-native testing integration with robust browser-based test execution.
+**Rationale**: Comprehensive testing prevents regressions, documents expected behavior, enables confident refactoring, and reduces production bugs. Vitest provides blazing-fast test execution, native ESM support, instant watch mode, and seamless Vite integration. Combined with `@analogjs/vitest-angular`, it offers superior performance over traditional Karma/Jasmine setups while maintaining full Angular testing capabilities. Vitest's modern architecture aligns with the project's commitment to cutting-edge tooling and developer experience.
 
 ### VI. Simple and Intuitive UX/UI
 
@@ -142,11 +152,24 @@ Before merging, all pull requests MUST:
 
 All tests MUST:
 - Be isolated and independent (no test interdependencies)
-- Use descriptive test names following "should" pattern
+- Use descriptive test names following "should" pattern or descriptive strings
 - Follow Arrange-Act-Assert pattern
 - Clean up resources (subscriptions, timers) in `afterEach`
 - Use component harnesses for Angular Material components
 - Avoid implementation details (test behavior, not internals)
+- Run in zoneless mode matching the application runtime environment
+
+### Vitest-Specific Testing Standards
+
+All Vitest tests MUST:
+
+- Use Vitest's native API (`describe`, `it`, `expect`, `beforeEach`, `afterEach`)
+- Leverage Vitest's fast watch mode during development
+- Use snapshot testing for component regression testing (`toMatchSnapshot()`)
+- Configure proper setup files for Angular TestBed initialization
+- Run tests in jsdom environment or browser mode for component tests
+- Use Vitest's built-in mocking capabilities (`vi.mock()`, `vi.fn()`, `vi.spyOn()`)
+- Maintain fast test execution (leverage Vitest's parallel execution and smart test re-run)
 
 ### Mocking Standards
 
@@ -165,15 +188,24 @@ All external service mocks MUST:
 The project MUST use:
 - **Framework**: Angular 20.x with standalone components
 - **UI Library**: Angular Material 20.x
-- **Testing**: Karma test runner with Jasmine framework
+- **Testing**: Vitest with `@analogjs/vitest-angular` (NON-NEGOTIABLE)
 - **Language**: TypeScript 5.9.x with strict mode
-- **State Management**: Angular Signals (no external state libraries unless justified) and Rxjs
-- **Build Tool**: Angular CLI
+- **State Management**: Angular Signals (no external state libraries unless justified) and RxJS
+- **Build Tool**: Angular CLI with Vite integration for testing
 - **Change Detection**: Zoneless (`provideExperimentalZonelessChangeDetection()`)
 - **Documentation Tool**: Context7 MCP for library documentation and code generation
 - **Database**: GCP Datastore (NoSQL managed database, mocked for local development)
 - **Authentication**: GCP Identity Federation (federated identity provider, mocked for local development)
 - **External APIs**: Google Books API v1 (`https://www.googleapis.com/books/v1/volumes`) for book search functionality
+
+### Test Configuration Requirements
+
+The project MUST include:
+
+- **vite.config.ts**: Vitest configuration with `@analogjs/vite-plugin-angular`
+- **test-setup.ts**: Angular TestBed initialization for zoneless mode
+- **tsconfig.spec.json**: TypeScript configuration with Vitest global types
+- **angular.json**: Test builder configured to use `@analogjs/vitest-angular:test`
 
 ### Prohibited Patterns
 
@@ -181,6 +213,8 @@ The following are PROHIBITED unless explicitly justified in the implementation p
 - NgModules (except for backwards compatibility requirements)
 - **Zone.js usage**: Application MUST operate without zone.js (NON-NEGOTIABLE)
 - Zone.js-dependent patterns (e.g., relying on automatic change detection triggers)
+- **Karma test runner**: Vitest is the exclusive testing framework (NON-NEGOTIABLE)
+- **Jasmine testing framework**: Use Vitest's native assertion API (NON-NEGOTIABLE)
 - `any` type in TypeScript
 - Structural directives (`*ngIf`, `*ngFor`, `*ngSwitch`)
 - Decorator-based inputs/outputs (`@Input`, `@Output`)
@@ -224,4 +258,4 @@ For implementation-specific guidance, refer to:
 - Angular and Angular Material official documentation
 - Context7 MCP for up-to-date library documentation
 
-**Version**: 1.3.1 | **Ratified**: 2025-11-10 | **Last Amended**: 2025-11-12
+**Version**: 2.0.0 | **Ratified**: 2025-11-10 | **Last Amended**: 2025-11-21

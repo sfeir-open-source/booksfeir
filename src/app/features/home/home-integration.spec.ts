@@ -1,29 +1,30 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, WritableSignal, signal } from '@angular/core';
-import { provideRouter, Router } from '@angular/router';
-import { Location } from '@angular/common';
-import { By } from '@angular/platform-browser';
-import { of } from 'rxjs';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection, signal, WritableSignal} from '@angular/core';
+import {provideRouter, Router} from '@angular/router';
+import {Location} from '@angular/common';
+import {By} from '@angular/platform-browser';
+import {of} from 'rxjs';
 
-import { HomeComponent } from './home.component';
-import { LibraryDetailComponent } from '../library-detail/library-detail.component';
-import { LibraryService } from '../../core/services/library.service';
-import { BookService } from '../../core/services/book.service';
-import { BorrowService } from '../../core/services/borrow.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { Library } from '../../core/models/library.model';
-import { Book, BookStatus } from '../../core/models/book.model';
-import { MatDialog } from '@angular/material/dialog';
+import {HomeComponent} from './home.component';
+import {LibraryDetailComponent} from '../library-detail/library-detail.component';
+import {LibraryService} from '../../core/services/library.service';
+import {BookService} from '../../core/services/book.service';
+import {BorrowService} from '../../core/services/borrow.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {Library} from '../../core/models/library.model';
+import {Book, BookStatus} from '../../core/models/book.model';
+import {MatDialog} from '@angular/material/dialog';
+import {vi} from 'vitest';
 
 describe('User Story 1 - View and Navigate Library Collection (Integration)', () => {
   let fixture: ComponentFixture<HomeComponent>;
   let router: Router;
   let location: Location;
-  let libraryServiceMock: jasmine.SpyObj<LibraryService>;
-  let bookServiceMock: jasmine.SpyObj<BookService>;
-  let borrowServiceMock: jasmine.SpyObj<BorrowService>;
-  let authServiceMock: jasmine.SpyObj<AuthMockService>;
-  let dialogMock: jasmine.SpyObj<MatDialog>;
+  let libraryServiceMock: any;
+  let bookServiceMock: any;
+  let borrowServiceMock: any;
+  let authServiceMock: any;
+  let dialogMock: any;
   let librariesSignal: WritableSignal<Library[]>;
   let booksSignal: WritableSignal<Book[]>;
 
@@ -81,11 +82,23 @@ describe('User Story 1 - View and Navigate Library Collection (Integration)', ()
 
   beforeEach(async () => {
     // Create service mocks
-    const libraryServiceSpy = jasmine.createSpyObj('LibraryService', ['getById', 'getAll']);
-    const bookServiceSpy = jasmine.createSpyObj('BookService', ['getByLibrary']);
-    const borrowServiceSpy = jasmine.createSpyObj('BorrowService', ['getBookBorrowTransaction']);
-    const authServiceSpy = jasmine.createSpyObj('AuthMockService', ['currentUser']);
-    const dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    const libraryServiceSpy = {
+      getById: vi.fn(),
+      getAll: vi.fn()
+    };
+    const bookServiceSpy = {
+      getByLibrary: vi.fn()
+    };
+    const borrowServiceSpy = {
+      getBookBorrowTransaction: vi.fn()
+    };
+    const authServiceSpy = {
+      currentUser: vi.fn(),
+      rigthOfManage: signal(true),
+    };
+    const dialogSpy = {
+      open: vi.fn()
+    };
 
     // Create writable signals for testing
     librariesSignal = signal<Library[]>(mockLibraries);
@@ -98,7 +111,7 @@ describe('User Story 1 - View and Navigate Library Collection (Integration)', ()
       get: () => booksSignal.asReadonly()
     });
 
-    authServiceSpy.currentUser.and.returnValue({
+    authServiceSpy.currentUser.mockReturnValue({
       id: 'test-user',
       name: 'Test User',
       email: 'test@example.com',
@@ -106,10 +119,10 @@ describe('User Story 1 - View and Navigate Library Collection (Integration)', ()
     });
 
     // Set up default mock return values
-    libraryServiceSpy.getAll.and.returnValue(of(mockLibraries));
-    libraryServiceSpy.getById.and.returnValue(of(mockLibraries[0]));
-    bookServiceSpy.getByLibrary.and.returnValue(of(mockBooksLib1));
-    borrowServiceSpy.getBookBorrowTransaction.and.returnValue(of(null));
+    libraryServiceSpy.getAll.mockReturnValue(of(mockLibraries));
+    libraryServiceSpy.getById.mockReturnValue(of(mockLibraries[0]));
+    bookServiceSpy.getByLibrary.mockReturnValue(of(mockBooksLib1));
+    borrowServiceSpy.getBookBorrowTransaction.mockReturnValue(of(null));
 
     await TestBed.configureTestingModule({
       imports: [HomeComponent, LibraryDetailComponent],
@@ -127,11 +140,11 @@ describe('User Story 1 - View and Navigate Library Collection (Integration)', ()
       ]
     }).compileComponents();
 
-    libraryServiceMock = TestBed.inject(LibraryService) as jasmine.SpyObj<LibraryService>;
-    bookServiceMock = TestBed.inject(BookService) as jasmine.SpyObj<BookService>;
-    borrowServiceMock = TestBed.inject(BorrowService) as jasmine.SpyObj<BorrowService>;
-    authServiceMock = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
-    dialogMock = TestBed.inject(MatDialog) as jasmine.SpyObj<MatDialog>;
+    libraryServiceMock = TestBed.inject(LibraryService) as any;
+    bookServiceMock = TestBed.inject(BookService) as any;
+    borrowServiceMock = TestBed.inject(BorrowService) as any;
+    authServiceMock = TestBed.inject(AuthMockService) as any;
+    dialogMock = TestBed.inject(MatDialog) as any;
     router = TestBed.inject(Router);
     location = TestBed.inject(Location);
   });
@@ -192,7 +205,7 @@ describe('User Story 1 - View and Navigate Library Collection (Integration)', ()
 
     it('should complete full navigation flow from home to library detail', async () => {
       // Reset spies for clean test
-      libraryServiceMock.getAll.calls.reset();
+      libraryServiceMock.getAll.mockClear();
 
       // Step 1: Load home page
       await router.navigate(['']);
@@ -280,7 +293,7 @@ describe('User Story 1 - View and Navigate Library Collection (Integration)', ()
 
   describe('Error Handling', () => {
     it('should handle library not found gracefully', async () => {
-      libraryServiceMock.getById.and.returnValue(of(null));
+      libraryServiceMock.getById.mockReturnValue(of(null));
 
       await router.navigate(['/library/non-existent']);
       const detailFixture = TestBed.createComponent(LibraryDetailComponent);
@@ -294,7 +307,7 @@ describe('User Story 1 - View and Navigate Library Collection (Integration)', ()
 
     it('should display empty state when no libraries exist', async () => {
       librariesSignal.set([]);
-      libraryServiceMock.getAll.and.returnValue(of([]));
+      libraryServiceMock.getAll.mockReturnValue(of([]));
 
       await router.navigate(['']);
       fixture = TestBed.createComponent(HomeComponent);

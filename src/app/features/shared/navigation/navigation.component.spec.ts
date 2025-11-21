@@ -4,11 +4,12 @@ import {provideRouter} from '@angular/router';
 import {NavigationComponent} from './navigation.component';
 import {AuthMockService} from '../../../core/services/mock/auth-mock.service';
 import {By} from '@angular/platform-browser';
+import {vi} from 'vitest';
 
 describe('NavigationComponent', () => {
   let component: NavigationComponent;
   let fixture: ComponentFixture<NavigationComponent>;
-  let authMock: jasmine.SpyObj<AuthMockService>;
+  let authMock: any;
 
   beforeEach(async () => {
     // Create a signal for the mock user
@@ -19,7 +20,9 @@ describe('NavigationComponent', () => {
       avatar: 'https://example.com/avatar.jpg'
     });
 
-    const authSpyObj = jasmine.createSpyObj('AuthMockService', ['getUserId']);
+    const authSpyObj = {
+      getUserId: vi.fn()
+    };
     // currentUser is a readonly signal, not a method
     Object.defineProperty(authSpyObj, 'currentUser', {
       get: () => userSignal.asReadonly()
@@ -34,7 +37,7 @@ describe('NavigationComponent', () => {
       ]
     }).compileComponents();
 
-    authMock = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
+    authMock = TestBed.inject(AuthMockService) as any;
     fixture = TestBed.createComponent(NavigationComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

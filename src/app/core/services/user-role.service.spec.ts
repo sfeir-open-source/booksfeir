@@ -16,19 +16,27 @@ import {UserRoleService} from './user-role.service';
 import {DatastoreService} from './datastore.service';
 import {AuditService} from './audit.service';
 import {User, UserRole} from '../models/user.model';
+import {vi} from 'vitest';
+import {of} from 'rxjs';
 
 describe('UserRoleService', () => {
   let service: UserRoleService;
-  let datastoreService: jasmine.SpyObj<DatastoreService>;
-  let auditService: jasmine.SpyObj<AuditService>;
+  let datastoreService: any;
+  let auditService: any;
   let mockUsers: User[];
   let mockAdmin: User;
   let mockUser: User;
   let mockLibrarian: User;
 
   beforeEach(() => {
-    const datastoreSpy = jasmine.createSpyObj('DatastoreService', ['get', 'query', 'save']);
-    const auditSpy = jasmine.createSpyObj('AuditService', ['logRoleChange']);
+    const datastoreSpy = {
+      get: vi.fn(),
+      query: vi.fn(),
+      save: vi.fn()
+    };
+    const auditSpy = {
+      logRoleChange$: vi.fn()
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -40,8 +48,8 @@ describe('UserRoleService', () => {
     });
 
     service = TestBed.inject(UserRoleService);
-    datastoreService = TestBed.inject(DatastoreService) as jasmine.SpyObj<DatastoreService>;
-    auditService = TestBed.inject(AuditService) as jasmine.SpyObj<AuditService>;
+    datastoreService = TestBed.inject(DatastoreService) as any;
+    auditService = TestBed.inject(AuditService) as any;
 
     // Setup mock users
     mockAdmin = {
@@ -84,7 +92,7 @@ describe('UserRoleService', () => {
 
   describe('assignRole', () => {
     beforeEach(() => {
-      auditService.logRoleChange.and.resolveTo({
+      auditService.logRoleChange$.mockReturnValue(of({
         id: 'audit-1',
         userId: 'user1',
         action: 'role_change',
@@ -92,13 +100,13 @@ describe('UserRoleService', () => {
         newRole: UserRole.LIBRARIAN,
         changedBy: 'admin1',
         timestamp: new Date()
-      });
+      }));
     });
 
     it('should successfully assign role when admin makes valid change', async () => {
-      datastoreService.get.and.resolveTo(mockAdmin); // Current user is admin
-      datastoreService.get.and.resolveTo(mockUser); // Target user exists
-      datastoreService.save.and.resolveTo();
+      datastoreService.get.mockResolvedValueOnce(mockAdmin); // Current user is admin
+      datastoreService.get.mockResolvedValueOnce(mockUser); // Target user exists
+      datastoreService.save.mockResolvedValue(undefined);
 
       const result = await service.assignRole('admin1', 'user1', UserRole.LIBRARIAN);
 
@@ -106,7 +114,7 @@ describe('UserRoleService', () => {
       expect(result.newRole).toBe(UserRole.LIBRARIAN);
       expect(result.previousRole).toBe(UserRole.USER);
       expect(datastoreService.save).toHaveBeenCalled();
-      expect(auditService.logRoleChange).toHaveBeenCalledWith(
+      expect(auditService.logRoleChange$).toHaveBeenCalledWith(
         'user1',
         UserRole.USER,
         UserRole.LIBRARIAN,
@@ -115,7 +123,7 @@ describe('UserRoleService', () => {
     });
 
     it('should fail if current user is not admin', async () => {
-      datastoreService.get.and.resolveTo(mockUser); // Current user is not admin
+      datastoreService.get.mockResolvedValue(mockUser); // Current user is not admin
 
       const result = await service.assignRole('user1', 'user2', UserRole.LIBRARIAN);
 
@@ -125,7 +133,7 @@ describe('UserRoleService', () => {
     });
 
     it('should fail if trying to modify own role', async () => {
-      datastoreService.get.and.resolveTo(mockAdmin);
+      datastoreService.get.mockResolvedValue(mockAdmin);
 
       const result = await service.assignRole('admin1', 'admin1', UserRole.USER);
 
@@ -135,8 +143,8 @@ describe('UserRoleService', () => {
     });
 
     it('should fail if target user does not exist', async () => {
-      datastoreService.get.and.resolveTo(mockAdmin); // Current user
-      datastoreService.get.and.resolveTo(null); // Target user not found
+      datastoreService.get.mockResolvedValueOnce(mockAdmin); // Current user
+      datastoreService.get.mockResolvedValueOnce(null); // Target user not found
 
       const result = await service.assignRole('admin1', 'user999', UserRole.LIBRARIAN);
 
@@ -146,9 +154,9 @@ describe('UserRoleService', () => {
     });
 
     it('should fail if demoting last admin', async () => {
-      datastoreService.get.and.resolveTo(mockAdmin); // Current user
-      datastoreService.get.and.resolveTo(mockAdmin); // Target user (same admin)
-      datastoreService.query.and.resolveTo([mockAdmin]); // Only one admin
+      datastoreService.get.mockResolvedValueOnce(mockAdmin); // Current user
+      datastoreService.get.mockResolvedValueOnce(mockAdmin); // Target user (same admin)
+      datastoreService.query.mockResolvedValue([mockAdmin]); // Only one admin
 
       const result = await service.assignRole('admin1', 'admin2', UserRole.USER);
 
@@ -157,33 +165,33 @@ describe('UserRoleService', () => {
     });
 
     it('should clear libraryIds when changing from LIBRARIAN to another role', async () => {
-      datastoreService.get.and.resolveTo(mockAdmin);
-      datastoreService.get.and.resolveTo(mockLibrarian);
-      datastoreService.save.and.resolveTo();
+      datastoreService.get.mockResolvedValueOnce(mockAdmin);
+      datastoreService.get.mockResolvedValueOnce(mockLibrarian);
+      datastoreService.save.mockResolvedValue(undefined);
 
       await service.assignRole('admin1', 'lib1', UserRole.USER);
 
-      const saveCall = datastoreService.save.calls.mostRecent();
-      const savedUser = saveCall.args[1] as User;
+      const saveCall = datastoreService.save.mock.calls[datastoreService.save.mock.calls.length - 1];
+      const savedUser = saveCall[1] as User;
       expect(savedUser.libraryIds).toBeUndefined();
     });
 
     it('should preserve libraryIds when changing to LIBRARIAN role', async () => {
-      datastoreService.get.and.resolveTo(mockAdmin);
-      datastoreService.get.and.resolveTo(mockUser);
-      datastoreService.save.and.resolveTo();
+      datastoreService.get.mockResolvedValueOnce(mockAdmin);
+      datastoreService.get.mockResolvedValueOnce(mockUser);
+      datastoreService.save.mockResolvedValue(undefined);
 
       await service.assignRole('admin1', 'user1', UserRole.LIBRARIAN);
 
-      const saveCall = datastoreService.save.calls.mostRecent();
-      const savedUser = saveCall.args[1] as User;
+      const saveCall = datastoreService.save.mock.calls[datastoreService.save.mock.calls.length - 1];
+      const savedUser = saveCall[1] as User;
       expect(savedUser.libraryIds).toBeUndefined(); // User had no libraries
     });
   });
 
   describe('getUsersExcept', () => {
     it('should return all users except specified user', async () => {
-      datastoreService.query.and.resolveTo(mockUsers);
+      datastoreService.query.mockResolvedValue(mockUsers);
 
       const result = await service.getUsersExcept('admin1');
 
@@ -194,7 +202,7 @@ describe('UserRoleService', () => {
     });
 
     it('should return empty array if only one user exists', async () => {
-      datastoreService.query.and.resolveTo([mockAdmin]);
+      datastoreService.query.mockResolvedValue([mockAdmin]);
 
       const result = await service.getUsersExcept('admin1');
 
@@ -204,7 +212,7 @@ describe('UserRoleService', () => {
 
   describe('getUser', () => {
     it('should return user if exists', async () => {
-      datastoreService.get.and.resolveTo(mockUser);
+      datastoreService.get.mockResolvedValue(mockUser);
 
       const result = await service.getUser('user1');
 
@@ -213,7 +221,7 @@ describe('UserRoleService', () => {
     });
 
     it('should return null if user does not exist', async () => {
-      datastoreService.get.and.resolveTo(null);
+      datastoreService.get.mockResolvedValue(null);
 
       const result = await service.getUser('user999');
 
@@ -223,7 +231,7 @@ describe('UserRoleService', () => {
 
   describe('isAdmin', () => {
     it('should return true for admin user', async () => {
-      datastoreService.get.and.resolveTo(mockAdmin);
+      datastoreService.get.mockResolvedValue(mockAdmin);
 
       const result = await service.isAdmin('admin1');
 
@@ -231,7 +239,7 @@ describe('UserRoleService', () => {
     });
 
     it('should return false for non-admin user', async () => {
-      datastoreService.get.and.resolveTo(mockUser);
+      datastoreService.get.mockResolvedValue(mockUser);
 
       const result = await service.isAdmin('user1');
 
@@ -239,7 +247,7 @@ describe('UserRoleService', () => {
     });
 
     it('should return false if user does not exist', async () => {
-      datastoreService.get.and.resolveTo(null);
+      datastoreService.get.mockResolvedValue(null);
 
       const result = await service.isAdmin('user999');
 
@@ -255,7 +263,7 @@ describe('UserRoleService', () => {
         mockUser,
         mockLibrarian
       ];
-      datastoreService.query.and.resolveTo(usersWithMultipleAdmins);
+      datastoreService.query.mockResolvedValue(usersWithMultipleAdmins);
 
       const count = await service.countAdmins();
 
@@ -263,7 +271,7 @@ describe('UserRoleService', () => {
     });
 
     it('should return 0 if no admins exist', async () => {
-      datastoreService.query.and.resolveTo([mockUser, mockLibrarian]);
+      datastoreService.query.mockResolvedValue([mockUser, mockLibrarian]);
 
       const count = await service.countAdmins();
 
@@ -273,48 +281,48 @@ describe('UserRoleService', () => {
 
   describe('assignLibraries', () => {
     it('should successfully assign libraries to librarian', async () => {
-      datastoreService.get.and.resolveTo(mockLibrarian);
-      datastoreService.query.and.resolveTo([
+      datastoreService.get.mockResolvedValue(mockLibrarian);
+      datastoreService.query.mockResolvedValue([
         {id: 'lib-1', name: 'Library 1'},
         {id: 'lib-2', name: 'Library 2'}
       ]);
-      datastoreService.save.and.resolveTo();
+      datastoreService.save.mockResolvedValue(undefined);
 
       await service.assignLibraries('lib1', ['lib-1', 'lib-2']);
 
       expect(datastoreService.save).toHaveBeenCalled();
-      const saveCall = datastoreService.save.calls.mostRecent();
-      const savedUser = saveCall.args[1] as User;
+      const saveCall = datastoreService.save.mock.calls[datastoreService.save.mock.calls.length - 1];
+      const savedUser = saveCall[1] as User;
       expect(savedUser.libraryIds).toEqual(['lib-1', 'lib-2']);
     });
 
     it('should throw error if user not found', async () => {
-      datastoreService.get.and.resolveTo(null);
+      datastoreService.get.mockResolvedValue(null);
 
-      await expectAsync(service.assignLibraries('user999', ['lib-1']))
-        .toBeRejectedWithError('User not found');
+      await expect(service.assignLibraries('user999', ['lib-1']))
+        .rejects.toThrow('User not found');
     });
 
     it('should throw error if user is not librarian', async () => {
-      datastoreService.get.and.resolveTo(mockUser);
+      datastoreService.get.mockResolvedValue(mockUser);
 
-      await expectAsync(service.assignLibraries('user1', ['lib-1']))
-        .toBeRejectedWithError('Can only assign libraries to librarians');
+      await expect(service.assignLibraries('user1', ['lib-1']))
+        .rejects.toThrow('Can only assign libraries to librarians');
     });
 
     it('should throw error if library IDs are invalid', async () => {
-      datastoreService.get.and.resolveTo(mockLibrarian);
-      datastoreService.query.and.resolveTo([
+      datastoreService.get.mockResolvedValue(mockLibrarian);
+      datastoreService.query.mockResolvedValue([
         {id: 'lib-1', name: 'Library 1'}
       ]);
 
-      await expectAsync(service.assignLibraries('lib1', ['lib-1', 'lib-999']))
-        .toBeRejectedWithError('Invalid library IDs: lib-999');
+      await expect(service.assignLibraries('lib1', ['lib-1', 'lib-999']))
+        .rejects.toThrow('Invalid library IDs: lib-999');
     });
 
     it('should allow empty library array', async () => {
-      datastoreService.get.and.resolveTo(mockLibrarian);
-      datastoreService.save.and.resolveTo();
+      datastoreService.get.mockResolvedValue(mockLibrarian);
+      datastoreService.save.mockResolvedValue(undefined);
 
       await service.assignLibraries('lib1', []);
 
@@ -324,7 +332,7 @@ describe('UserRoleService', () => {
 
   describe('getAssignedLibraries', () => {
     it('should return library IDs for librarian', async () => {
-      datastoreService.get.and.resolveTo(mockLibrarian);
+      datastoreService.get.mockResolvedValue(mockLibrarian);
 
       const result = await service.getAssignedLibraries('lib1');
 
@@ -332,7 +340,7 @@ describe('UserRoleService', () => {
     });
 
     it('should return empty array if user has no libraries', async () => {
-      datastoreService.get.and.resolveTo(mockUser);
+      datastoreService.get.mockResolvedValue(mockUser);
 
       const result = await service.getAssignedLibraries('user1');
 
@@ -340,7 +348,7 @@ describe('UserRoleService', () => {
     });
 
     it('should return empty array if user not found', async () => {
-      datastoreService.get.and.resolveTo(null);
+      datastoreService.get.mockResolvedValue(null);
 
       const result = await service.getAssignedLibraries('user999');
 

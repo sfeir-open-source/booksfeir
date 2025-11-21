@@ -7,7 +7,7 @@
  * Feature: 002-user-role-management (T031)
  */
 
-import {ChangeDetectionStrategy, Component} from '@angular/core';
+import {Component} from '@angular/core';
 import {UserList} from '../components/user-list/user-list';
 import {AuditLog} from '../components/audit-log/audit-log';
 
@@ -15,8 +15,7 @@ import {AuditLog} from '../components/audit-log/audit-log';
   selector: 'sfeir-user-management',
   imports: [UserList, AuditLog],
   templateUrl: './user-management.html',
-  styleUrl: './user-management.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './user-management.scss'
 })
 export class UserManagement {
 }

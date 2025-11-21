@@ -9,7 +9,7 @@
  */
 
 import {Injectable, signal} from '@angular/core';
-import {catchError, from, map, Observable, of, switchMap, tap} from 'rxjs';
+import {catchError, firstValueFrom, from, map, Observable, of, switchMap, tap} from 'rxjs';
 import {DatastoreService} from './datastore.service';
 import {User, UserRole} from '../models/user.model';
 import {AuditService} from './audit.service';
@@ -284,5 +284,76 @@ export class UserRoleService {
     return this.getUser$(userId).pipe(
       map(user => user?.libraryIds || [])
     );
+  }
+
+  // Promise-based wrapper methods for testing and synchronous contexts
+
+  /**
+   * Assign a role to a user (Promise-based wrapper)
+   * @param currentUserId - ID of admin making the change
+   * @param targetUserId - ID of user to modify
+   * @param newRole - Role to assign
+   * @returns Promise of assignment result
+   */
+  async assignRole(
+    currentUserId: string,
+    targetUserId: string,
+    newRole: UserRole
+  ): Promise<RoleAssignmentResult> {
+    return await firstValueFrom(this.assignRole$(currentUserId, targetUserId, newRole));
+  }
+
+  /**
+   * Get all users except the specified user (Promise-based wrapper)
+   * @param excludeUserId - User ID to exclude (current admin)
+   * @returns Promise of users array
+   */
+  async getUsersExcept(excludeUserId: string): Promise<User[]> {
+    return await firstValueFrom(this.getUsersExcept$(excludeUserId));
+  }
+
+  /**
+   * Get user by ID (Promise-based wrapper)
+   * @param userId - User ID
+   * @returns Promise of user or null if not found
+   */
+  async getUser(userId: string): Promise<User | null> {
+    return await firstValueFrom(this.getUser$(userId));
+  }
+
+  /**
+   * Check if user has admin role (Promise-based wrapper)
+   * @param userId - User ID to check
+   * @returns Promise of boolean indicating if user is admin
+   */
+  async isAdmin(userId: string): Promise<boolean> {
+    return await firstValueFrom(this.isAdmin$(userId));
+  }
+
+  /**
+   * Count number of admin users in the system (Promise-based wrapper)
+   * @returns Promise of number of users with ADMIN role
+   */
+  async countAdmins(): Promise<number> {
+    return await firstValueFrom(this.countAdmins$());
+  }
+
+  /**
+   * Assign libraries to a librarian (Promise-based wrapper)
+   * @param userId - Librarian user ID
+   * @param libraryIds - Array of library IDs to assign
+   * @returns Promise of void
+   */
+  async assignLibraries(userId: string, libraryIds: string[]): Promise<void> {
+    return await firstValueFrom(this.assignLibraries$(userId, libraryIds));
+  }
+
+  /**
+   * Get libraries assigned to a librarian (Promise-based wrapper)
+   * @param userId - Librarian user ID
+   * @returns Promise of array of library IDs
+   */
+  async getAssignedLibraries(userId: string): Promise<string[]> {
+    return await firstValueFrom(this.getAssignedLibraries$(userId));
   }
 }
