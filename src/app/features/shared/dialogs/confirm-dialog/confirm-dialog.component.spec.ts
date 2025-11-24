@@ -1,13 +1,14 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { ConfirmDialogComponent, ConfirmDialogData } from './confirm-dialog.component';
-import { By } from '@angular/platform-browser';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
+import {ConfirmDialogComponent, ConfirmDialogData} from './confirm-dialog.component';
+import {By} from '@angular/platform-browser';
+import {vi} from 'vitest';
 
 describe('ConfirmDialogComponent', () => {
   let component: ConfirmDialogComponent;
   let fixture: ComponentFixture<ConfirmDialogComponent>;
-  let dialogRefSpy: jasmine.SpyObj<MatDialogRef<ConfirmDialogComponent>>;
+  let dialogRefSpy: any;
 
   const defaultDialogData: ConfirmDialogData = {
     title: 'Test Title',
@@ -15,7 +16,9 @@ describe('ConfirmDialogComponent', () => {
   };
 
   function createComponent(data: ConfirmDialogData = defaultDialogData) {
-    dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['close']);
+    dialogRefSpy = {
+      close: vi.fn()
+    };
 
     TestBed.configureTestingModule({
       imports: [ConfirmDialogComponent],

@@ -1,6 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
-import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
+import {Component, inject} from '@angular/core';
+import {MAT_DIALOG_DATA, MatDialogModule, MatDialogRef} from '@angular/material/dialog';
+import {MatButtonModule} from '@angular/material/button';
 
 /**
  * ConfirmDialogComponent
@@ -35,7 +35,6 @@ export interface ConfirmDialogData {
 
 @Component({
   selector: 'sfeir-confirm-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule
@@ -78,8 +77,7 @@ export interface ConfirmDialogData {
       margin: 0;
       line-height: 1.5;
     }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  `]
 })
 export class ConfirmDialogComponent {
   data = inject<ConfirmDialogData>(MAT_DIALOG_DATA);

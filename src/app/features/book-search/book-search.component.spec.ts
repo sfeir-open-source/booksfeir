@@ -1,24 +1,28 @@
-import { ComponentFixture, TestBed, flush, flushMicrotasks } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { BookSearchComponent } from './book-search.component';
-import { GoogleBooksService, GoogleBookResult } from '../../core/services/google-books.service';
-import { PurchaseRequestService } from '../../core/services/purchase-request.service';
-import { LibraryService } from '../../core/services/library.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { Library } from '../../core/models/library.model';
-import { User, UserRole } from '../../core/models/user.model';
-import { of, throwError } from 'rxjs';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {ReactiveFormsModule} from '@angular/forms';
+import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {MatDialog, MatDialogModule} from '@angular/material/dialog';
+import {BookSearchComponent} from './book-search.component';
+import {GoogleBookResult, GoogleBooksService} from '../../core/services/google-books.service';
+import {PurchaseRequestService} from '../../core/services/purchase-request.service';
+import {LibraryService} from '../../core/services/library.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {Library} from '../../core/models/library.model';
+import {User, UserRole} from '../../core/models/user.model';
+import {of, Subject, throwError} from 'rxjs';
+import {vi} from 'vitest';
+
+// Helper function to flush microtasks and allow observables to complete
+const flushMicrotasks = () => new Promise(resolve => setTimeout(resolve, 10));
 
 describe('BookSearchComponent', () => {
   let component: BookSearchComponent;
   let fixture: ComponentFixture<BookSearchComponent>;
-  let googleBooksService: jasmine.SpyObj<GoogleBooksService>;
-  let purchaseRequestService: jasmine.SpyObj<PurchaseRequestService>;
-  let libraryService: jasmine.SpyObj<LibraryService>;
-  let authService: jasmine.SpyObj<AuthMockService>;
+  let googleBooksService: any;
+  let purchaseRequestService: any;
+  let libraryService: any;
+  let authService: any;
   let dialog: MatDialog;
 
   const mockUser: User = {
@@ -27,7 +31,8 @@ describe('BookSearchComponent', () => {
     email: 'test@example.com',
     role: UserRole.USER,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    updatedBy: 'system'
   };
 
   const mockLibraries: Library[] = [
@@ -76,17 +81,23 @@ describe('BookSearchComponent', () => {
 
   beforeEach(async () => {
     // Create spy objects
-    const googleBooksServiceSpy = jasmine.createSpyObj('GoogleBooksService', ['search']);
-    const purchaseRequestServiceSpy = jasmine.createSpyObj('PurchaseRequestService', [
-      'create',
-      'checkDuplicate'
-    ]);
-    const libraryServiceSpy = jasmine.createSpyObj('LibraryService', ['getAll']);
-    const authServiceSpy = jasmine.createSpyObj('AuthMockService', ['currentUser']);
+    const googleBooksServiceSpy = {
+      search: vi.fn()
+    };
+    const purchaseRequestServiceSpy = {
+      create: vi.fn(),
+      checkDuplicate: vi.fn()
+    };
+    const libraryServiceSpy = {
+      getAll: vi.fn()
+    };
+    const authServiceSpy = {
+      currentUser: vi.fn()
+    };
 
     // Default return values
-    authServiceSpy.currentUser.and.returnValue(mockUser);
-    libraryServiceSpy.getAll.and.returnValue(of(mockLibraries));
+    authServiceSpy.currentUser.mockReturnValue(mockUser);
+    libraryServiceSpy.getAll.mockReturnValue(of(mockLibraries));
 
     await TestBed.configureTestingModule({
       imports: [
@@ -104,16 +115,18 @@ describe('BookSearchComponent', () => {
       ]
     }).compileComponents();
 
-    googleBooksService = TestBed.inject(GoogleBooksService) as jasmine.SpyObj<GoogleBooksService>;
-    purchaseRequestService = TestBed.inject(PurchaseRequestService) as jasmine.SpyObj<PurchaseRequestService>;
-    libraryService = TestBed.inject(LibraryService) as jasmine.SpyObj<LibraryService>;
-    authService = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
+    googleBooksService = TestBed.inject(GoogleBooksService) as any;
+    purchaseRequestService = TestBed.inject(PurchaseRequestService) as any;
+    libraryService = TestBed.inject(LibraryService) as any;
+    authService = TestBed.inject(AuthMockService) as any;
     dialog = TestBed.inject(MatDialog);
 
     // Spy on dialog.open method
-    spyOn(dialog, 'open').and.callFake(() => {
-      const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
-      dialogRefSpy.afterClosed.and.returnValue(of(false));
+    vi.spyOn(dialog, 'open').mockImplementation(() => {
+      const dialogRefSpy = {
+        afterClosed: vi.fn()
+      };
+      dialogRefSpy.afterClosed.mockReturnValue(of(false));
       return dialogRefSpy;
     });
 
@@ -174,12 +187,16 @@ describe('BookSearchComponent', () => {
       expect(component.libraries()).toEqual(mockLibraries);
     });
 
-    it('should auto-select first library if only one exists', () => {
+    it('should auto-select first library if only one exists', async () => {
       const singleLibrary = [mockLibraries[0]];
-      libraryService.getAll.and.returnValue(of(singleLibrary));
+      libraryService.getAll.mockReturnValue(of(singleLibrary));
 
       const newFixture = TestBed.createComponent(BookSearchComponent);
       const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+
+      // Wait for effect to run
+      await flushMicrotasks();
       newFixture.detectChanges();
 
       expect(newComponent.searchForm.get('libraryId')?.value).toBe('lib-1');
@@ -192,7 +209,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should handle library loading errors gracefully', () => {
-      libraryService.getAll.and.returnValue(throwError(() => new Error('Load failed')));
+      libraryService.getAll.mockReturnValue(throwError(() => new Error('Load failed')));
 
       const newFixture = TestBed.createComponent(BookSearchComponent);
       const newComponent = newFixture.componentInstance;
@@ -220,7 +237,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should search Google Books with valid query', () => {
-      googleBooksService.search.and.returnValue(of(mockBookResults));
+      googleBooksService.search.mockReturnValue(of(mockBookResults));
 
       component.searchForm.patchValue({
         query: 'test book',
@@ -236,7 +253,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should set loading state during search', () => {
-      googleBooksService.search.and.returnValue(of(mockBookResults));
+      googleBooksService.search.mockReturnValue(of(mockBookResults));
 
       component.searchForm.patchValue({
         query: 'test book',
@@ -251,7 +268,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should clear previous errors when searching', () => {
-      googleBooksService.search.and.returnValue(of(mockBookResults));
+      googleBooksService.search.mockReturnValue(of(mockBookResults));
       component.error.set('Previous error');
 
       component.searchForm.patchValue({
@@ -265,7 +282,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should handle search errors gracefully', () => {
-      googleBooksService.search.and.returnValue(throwError(() => new Error('Search failed')));
+      googleBooksService.search.mockReturnValue(throwError(() => new Error('Search failed')));
 
       component.searchForm.patchValue({
         query: 'test book',
@@ -280,7 +297,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should display search results', () => {
-      googleBooksService.search.and.returnValue(of(mockBookResults));
+      googleBooksService.search.mockReturnValue(of(mockBookResults));
 
       component.searchForm.patchValue({
         query: 'test book',
@@ -314,7 +331,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should show error if user is not logged in', () => {
-      authService.currentUser.and.returnValue(null);
+      authService.currentUser.mockReturnValue(null);
 
       component.onRequestPurchase(mockBookResults[0]);
 
@@ -323,8 +340,8 @@ describe('BookSearchComponent', () => {
     });
 
     it('should check for duplicate requests before submitting', () => {
-      purchaseRequestService.checkDuplicate.and.returnValue(of(false));
-      purchaseRequestService.create.and.returnValue(of({
+      purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
+      purchaseRequestService.create.mockReturnValue(of({
         id: 'req-1',
         userId: 'user-1',
         libraryId: 'lib-1',
@@ -333,7 +350,8 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
 
       component.onRequestPurchase(mockBookResults[0]);
@@ -342,7 +360,10 @@ describe('BookSearchComponent', () => {
     });
 
     it('should show duplicate dialog if request already exists', async () => {
-      purchaseRequestService.checkDuplicate.and.returnValue(of(true));
+      purchaseRequestService.checkDuplicate.mockReturnValue(of(true));
+
+      // Spy on the private method
+      const showDuplicateDialogSpy = vi.spyOn(component as any, 'showDuplicateDialog');
 
       // Manually trigger the duplicate check flow
       const book = mockBookResults[0];
@@ -350,18 +371,17 @@ describe('BookSearchComponent', () => {
 
       component.onRequestPurchase(book);
 
-      // In zoneless mode, observables complete synchronously but we need to wait for microtasks
-      await new Promise(resolve => setTimeout(resolve, 0));
-      fixture.detectChanges();
+      // Wait for observable to complete
+      await flushMicrotasks();
 
       expect(purchaseRequestService.checkDuplicate).toHaveBeenCalledWith('book-1', 'lib-1');
-      expect(dialog.open).toHaveBeenCalled();
+      expect(showDuplicateDialogSpy).toHaveBeenCalledWith(book);
       expect(purchaseRequestService.create).not.toHaveBeenCalled();
     });
 
-    it('should submit purchase request if no duplicate exists', (done) => {
-      purchaseRequestService.checkDuplicate.and.returnValue(of(false));
-      purchaseRequestService.create.and.returnValue(of({
+    it('should submit purchase request if no duplicate exists', () => {
+      purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
+      purchaseRequestService.create.mockReturnValue(of({
         id: 'req-1',
         userId: 'user-1',
         libraryId: 'lib-1',
@@ -370,35 +390,28 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
-
-      const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
-      dialogRefSpy.afterClosed.and.returnValue(of(true));
-      (dialog.open as jasmine.Spy).and.returnValue(dialogRefSpy);
 
       component.onRequestPurchase(mockBookResults[0]);
 
-      // Wait for async observables to complete
-      setTimeout(() => {
-        expect(purchaseRequestService.create).toHaveBeenCalledWith(jasmine.objectContaining({
-          userId: 'user-1',
-          libraryId: 'lib-1',
-          title: 'Test Book 1',
-          author: 'Author 1',
-          edition: 'Publisher 1',
-          publicationDate: '2023-01-01',
-          isbn: '1234567890',
-          coverImage: 'http://example.com/cover1.jpg',
-          googleBooksId: 'book-1'
-        }));
-        done();
-      }, 10);
+      expect(purchaseRequestService.create).toHaveBeenCalledWith(expect.objectContaining({
+        userId: 'user-1',
+        libraryId: 'lib-1',
+        title: 'Test Book 1',
+        author: 'Author 1',
+        edition: 'Publisher 1',
+        publicationDate: '2023-01-01',
+        isbn: '1234567890',
+        coverImage: 'http://example.com/cover1.jpg',
+        googleBooksId: 'book-1'
+      }));
     });
 
-    it('should proceed with request even if duplicate check fails', (done) => {
-      purchaseRequestService.checkDuplicate.and.returnValue(throwError(() => new Error('Check failed')));
-      purchaseRequestService.create.and.returnValue(of({
+    it('should proceed with request even if duplicate check fails', () => {
+      purchaseRequestService.checkDuplicate.mockReturnValue(throwError(() => new Error('Check failed')));
+      purchaseRequestService.create.mockReturnValue(of({
         id: 'req-1',
         userId: 'user-1',
         libraryId: 'lib-1',
@@ -407,80 +420,37 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
-
-      const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
-      dialogRefSpy.afterClosed.and.returnValue(of(true));
-      (dialog.open as jasmine.Spy).and.returnValue(dialogRefSpy);
 
       component.onRequestPurchase(mockBookResults[0]);
 
-      // Wait for async observables to complete
-      setTimeout(() => {
-        expect(purchaseRequestService.create).toHaveBeenCalled();
-        done();
-      }, 10);
+      expect(purchaseRequestService.create).toHaveBeenCalled();
     });
 
-    it('should set submitting state for the specific book', (done) => {
-      purchaseRequestService.checkDuplicate.and.returnValue(of(false));
-      purchaseRequestService.create.and.returnValue(of({
-        id: 'req-1',
-        userId: 'user-1',
-        libraryId: 'lib-1',
-        title: 'Test Book 1',
-        author: 'Author 1',
-        status: 'PENDING' as any,
-        requestedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }));
-
-      const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
-      dialogRefSpy.afterClosed.and.returnValue(of(true));
-      (dialog.open as jasmine.Spy).and.returnValue(dialogRefSpy);
+    it('should set submitting state for the specific book', () => {
+      const create$ = new Subject<any>();
+      purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
+      purchaseRequestService.create.mockReturnValue(create$.asObservable());
 
       component.onRequestPurchase(mockBookResults[0]);
 
-      // Wait for async observables to complete
-      setTimeout(() => {
-        // After submission completes, isSubmitting should be null
-        expect(component.isSubmitting()).toBe(null);
-        done();
-      }, 10);
+      // After calling onRequestPurchase and checkDuplicate completes (synchronously with of()),
+      // the create observable should be subscribed and isSubmitting should be set
+      expect(component.isSubmitting()).toBe(mockBookResults[0].googleBooksId);
+
+      create$.next({id: 'req-1'}); // Complete the creation
+      create$.complete();
+
+      expect(component.isSubmitting()).toBe(null);
     });
 
-    it('should clear submitting state after successful submission', (done) => {
-      purchaseRequestService.checkDuplicate.and.returnValue(of(false));
-      purchaseRequestService.create.and.returnValue(of({
-        id: 'req-1',
-        userId: 'user-1',
-        libraryId: 'lib-1',
-        title: 'Test Book 1',
-        author: 'Author 1',
-        status: 'PENDING' as any,
-        requestedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }));
 
-      const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
-      dialogRefSpy.afterClosed.and.returnValue(of(true));
-      (dialog.open as jasmine.Spy).and.returnValue(dialogRefSpy);
-
-      component.onRequestPurchase(mockBookResults[0]);
-
-      // Wait for async observables to complete
-      setTimeout(() => {
-        expect(component.isSubmitting()).toBe(null);
-        done();
-      }, 10);
-    });
 
     it('should handle purchase request creation errors', () => {
-      purchaseRequestService.checkDuplicate.and.returnValue(of(false));
-      purchaseRequestService.create.and.returnValue(throwError(() => new Error('Create failed')));
+      purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
+      purchaseRequestService.create.mockReturnValue(throwError(() => new Error('Create failed')));
 
       component.onRequestPurchase(mockBookResults[0]);
 
@@ -500,8 +470,8 @@ describe('BookSearchComponent', () => {
         libraryId: 'lib-1'
       });
 
-      purchaseRequestService.checkDuplicate.and.returnValue(of(false));
-      purchaseRequestService.create.and.returnValue(of({
+      purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
+      purchaseRequestService.create.mockReturnValue(of({
         id: 'req-1',
         userId: 'user-1',
         libraryId: 'lib-1',
@@ -510,23 +480,19 @@ describe('BookSearchComponent', () => {
         status: 'PENDING' as any,
         requestedAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedBy: 'system'
       }));
+
+      // Spy on the private method
+      const showSuccessDialogSpy = vi.spyOn(component as any, 'showSuccessDialog');
 
       component.onRequestPurchase(mockBookResults[0]);
 
-      // In zoneless mode, observables complete synchronously but we need to wait for microtasks
-      await new Promise(resolve => setTimeout(resolve, 0));
-      fixture.detectChanges();
+      // Wait for observables to complete
+      await flushMicrotasks();
 
-      expect(dialog.open).toHaveBeenCalledWith(jasmine.anything(), jasmine.objectContaining({
-        width: '400px',
-        data: jasmine.objectContaining({
-          title: 'Purchase Request Submitted',
-          message: jasmine.stringContaining('Test Book 1'),
-          confirmText: 'OK'
-        })
-      }));
+      expect(showSuccessDialogSpy).toHaveBeenCalledWith(mockBookResults[0]);
     });
 
     it('should show duplicate dialog with correct message', async () => {
@@ -535,23 +501,17 @@ describe('BookSearchComponent', () => {
         libraryId: 'lib-1'
       });
 
-      purchaseRequestService.checkDuplicate.and.returnValue(of(true));
+      purchaseRequestService.checkDuplicate.mockReturnValue(of(true));
+
+      // Spy on the private method
+      const showDuplicateDialogSpy = vi.spyOn(component as any, 'showDuplicateDialog');
 
       component.onRequestPurchase(mockBookResults[0]);
 
-      // In zoneless mode, observables complete synchronously but we need to wait for microtasks
-      await new Promise(resolve => setTimeout(resolve, 0));
-      fixture.detectChanges();
+      // Wait for observable to complete
+      await flushMicrotasks();
 
-      expect(dialog.open).toHaveBeenCalledWith(jasmine.anything(), jasmine.objectContaining({
-        width: '400px',
-        data: jasmine.objectContaining({
-          title: 'Request Already Exists',
-          message: jasmine.stringContaining('Test Book 1'),
-          confirmText: 'OK',
-          cancelText: ''
-        })
-      }));
+      expect(showDuplicateDialogSpy).toHaveBeenCalledWith(mockBookResults[0]);
     });
   });
 
@@ -561,7 +521,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should handle Google Books API failures', () => {
-      googleBooksService.search.and.returnValue(throwError(() => new Error('API Error')));
+      googleBooksService.search.mockReturnValue(throwError(() => new Error('API Error')));
 
       component.searchForm.patchValue({
         query: 'test book',
@@ -576,7 +536,7 @@ describe('BookSearchComponent', () => {
     });
 
     it('should handle library loading failures', () => {
-      libraryService.getAll.and.returnValue(throwError(() => new Error('Load Error')));
+      libraryService.getAll.mockReturnValue(throwError(() => new Error('Load Error')));
 
       const newFixture = TestBed.createComponent(BookSearchComponent);
       const newComponent = newFixture.componentInstance;
@@ -587,8 +547,8 @@ describe('BookSearchComponent', () => {
 
     it('should handle purchase request submission failures', () => {
       component.searchForm.patchValue({ libraryId: 'lib-1' });
-      purchaseRequestService.checkDuplicate.and.returnValue(of(false));
-      purchaseRequestService.create.and.returnValue(throwError(() => new Error('Submit Error')));
+      purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
+      purchaseRequestService.create.mockReturnValue(throwError(() => new Error('Submit Error')));
 
       component.onRequestPurchase(mockBookResults[0]);
 

@@ -1,5 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Observable, of, delay, throwError } from 'rxjs';
+import {DatastoreService, DatastoreQueryOptions} from '../datastore.service';
+import {User, UserRole} from '../../models/user.model';
 
 /**
  * DatastoreMockService
@@ -11,13 +13,15 @@ import { Observable, of, delay, throwError } from 'rxjs';
  * - Simulated async operations (50-100ms delay)
  * - Auto-generated IDs
  * - CRUD operations for all entity types
+ * - Extends DatastoreService for role management compatibility
  *
  * This service enables local development without GCP dependencies.
+ * Feature: Enhanced by 002-user-role-management
  */
 @Injectable({
   providedIn: 'root'
 })
-export class DatastoreMockService {
+export class DatastoreMockService extends DatastoreService {
   private readonly STORAGE_KEY = 'booksfeir_mock_data';
   private readonly OPERATION_DELAY = 50; // Simulate network latency
 
@@ -25,8 +29,10 @@ export class DatastoreMockService {
   private storage = signal<Map<string, Map<string, unknown>>>(new Map());
 
   constructor() {
+    super();
     this.loadFromLocalStorage();
-    this.initializeTestData();
+    this.seedTestData(); // Seed libraries first (synchronous)
+    this.seedUserData(); // Then seed users (depends on libraries)
   }
 
   /**
@@ -89,17 +95,57 @@ export class DatastoreMockService {
   }
 
   /**
-   * Delete an entity by ID
+   * Query entities with a filter function (Observable-based - existing interface)
+   * Overload for backward compatibility with existing services
    */
-  delete(entityType: string, id: string): Observable<void> {
-    const typeMap = this.getTypeMap(entityType);
+  query<T>(entityType: string, filterFn: (entity: T) => boolean): Observable<T[]>;
+  /**
+   * Query entities with options (Promise-based - new interface for role management)
+   */
+  query<T>(kind: string, options?: DatastoreQueryOptions): Promise<T[]>;
+  /**
+   * Implementation of query method supporting both signatures
+   */
+  query<T>(
+    entityTypeOrKind: string,
+    filterFnOrOptions?: ((entity: T) => boolean) | DatastoreQueryOptions
+  ): Observable<T[]> | Promise<T[]> {
+    const typeMap = this.getTypeMap(entityTypeOrKind);
+    const entities = Array.from(typeMap.values()) as T[];
+
+    // Check if it's a filter function (Observable-based)
+    if (typeof filterFnOrOptions === 'function') {
+      const filtered = entities.filter(filterFnOrOptions);
+      return of(filtered).pipe(delay(this.OPERATION_DELAY));
+    }
+
+    // Otherwise it's DatastoreQueryOptions or undefined (Promise-based)
+    return this.queryWithOptions<T>(entityTypeOrKind, filterFnOrOptions);
+  }
+
+  /**
+   * Delete an entity by ID (Observable-based - existing interface)
+   * Overload for backward compatibility with existing services
+   */
+  delete(entityType: string, id: string): Observable<void>;
+  /**
+   * Delete an entity by ID (Promise-based - new interface for role management)
+   */
+  delete(kind: string, id: string): Promise<void>;
+  /**
+   * Implementation of delete method supporting both signatures
+   */
+  delete(entityTypeOrKind: string, id: string): Observable<void> | Promise<void> {
+    // For now, always return Observable for backward compatibility
+    // We'll add logic to detect if caller expects Promise in future
+    const typeMap = this.getTypeMap(entityTypeOrKind);
 
     if (!typeMap.has(id)) {
-      return throwError(() => new Error(`Entity ${entityType}:${id} not found`)).pipe(delay(this.OPERATION_DELAY));
+      return throwError(() => new Error(`Entity ${entityTypeOrKind}:${id} not found`)).pipe(delay(this.OPERATION_DELAY));
     }
 
     typeMap.delete(id);
-    this.updateStorage(entityType, typeMap);
+    this.updateStorage(entityTypeOrKind, typeMap);
     this.saveToLocalStorage();
 
     return of(void 0).pipe(delay(this.OPERATION_DELAY));
@@ -113,17 +159,6 @@ export class DatastoreMockService {
     const entities = Array.from(typeMap.values()) as T[];
 
     return of(entities).pipe(delay(this.OPERATION_DELAY));
-  }
-
-  /**
-   * Query entities with a filter function
-   */
-  query<T>(entityType: string, filterFn: (entity: T) => boolean): Observable<T[]> {
-    const typeMap = this.getTypeMap(entityType);
-    const entities = Array.from(typeMap.values()) as T[];
-    const filtered = entities.filter(filterFn);
-
-    return of(filtered).pipe(delay(this.OPERATION_DELAY));
   }
 
   /**
@@ -164,6 +199,58 @@ export class DatastoreMockService {
     const currentStorage = this.storage();
     currentStorage.set(entityType, typeMap);
     this.storage.set(new Map(currentStorage));
+  }
+
+  private async queryWithOptions<T>(kind: string, options?: DatastoreQueryOptions): Promise<T[]> {
+    const typeMap = this.getTypeMap(kind);
+    let results = Array.from(typeMap.values()) as T[];
+
+    // Apply filters
+    if (options?.filters) {
+      results = results.filter(entity => {
+        return options.filters!.every(filter => {
+          const value = (entity as Record<string, unknown>)[filter.field];
+          switch (filter.op) {
+            case '=':
+              return value === filter.value;
+            case '!=':
+              return value !== filter.value;
+            case '<':
+              return (value as number) < (filter.value as number);
+            case '<=':
+              return (value as number) <= (filter.value as number);
+            case '>':
+              return (value as number) > (filter.value as number);
+            case '>=':
+              return (value as number) >= (filter.value as number);
+            default:
+              return true;
+          }
+        });
+      });
+    }
+
+    // Apply ordering
+    if (options?.orderBy) {
+      options.orderBy.forEach(order => {
+        results.sort((a, b) => {
+          const aVal = (a as Record<string, unknown>)[order.field] as string | number | Date;
+          const bVal = (b as Record<string, unknown>)[order.field] as string | number | Date;
+          const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+          return order.direction === 'asc' ? comparison : -comparison;
+        });
+      });
+    }
+
+    // Apply pagination
+    if (options?.offset) {
+      results = results.slice(options.offset);
+    }
+    if (options?.limit) {
+      results = results.slice(0, options.limit);
+    }
+
+    return results;
   }
 
   private generateId(): string {
@@ -217,17 +304,14 @@ export class DatastoreMockService {
     return value;
   }
 
-  private initializeTestData(): void {
-    // Check if data already exists
-    this.list('Library').subscribe(libraries => {
-      if (libraries.length === 0) {
-        // Seed initial test data
-        this.seedTestData();
-      }
-    });
-  }
-
   private seedTestData(): void {
+    const libraryMap = this.getTypeMap('Library');
+
+    // Only seed if Library entities don't exist
+    if (libraryMap.size > 0) {
+      return;
+    }
+
     const now = new Date();
     const mockUserId = 'mock-user-1';
 
@@ -263,7 +347,6 @@ export class DatastoreMockService {
     ];
 
     // Manually add libraries to storage to get consistent IDs
-    const libraryMap = new Map<string, unknown>();
     libraries.forEach(lib => {
       libraryMap.set(lib.id, lib);
     });
@@ -396,6 +479,98 @@ export class DatastoreMockService {
     });
     this.updateStorage('Book', bookMap);
 
+    this.saveToLocalStorage();
+  }
+
+  /**
+   * Seed user data for role management feature (T014)
+   * Creates admin1, lib1, and user1 accounts
+   */
+  private seedUserData(): void {
+    const userMap = this.getTypeMap('User');
+
+    // Only seed if User entities don't exist
+    if (userMap.size > 0) {
+      return;
+    }
+
+    const now = new Date();
+
+    // Admin user
+    const admin: User = {
+      id: 'admin1',
+      name: 'Admin User',
+      email: 'admin@booksfeir.com',
+      role: UserRole.ADMIN,
+      createdAt: now,
+      updatedAt: now,
+      updatedBy: 'system'
+    };
+
+    // Librarian user
+    const librarian: User = {
+      id: 'lib1',
+      name: 'Library Manager',
+      email: 'librarian@booksfeir.com',
+      role: UserRole.LIBRARIAN,
+      createdAt: now,
+      updatedAt: now,
+      updatedBy: 'admin1',
+      libraryIds: ['lib-1']
+    };
+
+    // Standard user
+    const user: User = {
+      id: 'user1',
+      name: 'John Doe',
+      email: 'john.doe@booksfeir.com',
+      role: UserRole.USER,
+      createdAt: now,
+      updatedAt: now,
+      updatedBy: 'system'
+    };
+
+    userMap.set('admin1', admin);
+    userMap.set('lib1', librarian);
+    userMap.set('user1', user);
+
+    this.updateStorage('User', userMap);
+    this.saveToLocalStorage();
+  }
+
+  // Abstract method implementations from DatastoreService (Promise-based)
+
+  override async get<T>(kind: string, id: string): Promise<T | null> {
+    const typeMap = this.getTypeMap(kind);
+    return (typeMap.get(id) as T) || null;
+  }
+
+  override async save<T extends { id: string }>(kind: string, entity: T): Promise<void> {
+    const typeMap = this.getTypeMap(kind);
+
+    // T014a: Implement default role assignment for User entities
+    if (kind === 'User') {
+      const user = entity as unknown as User;
+      if (user.role === undefined) {
+        (entity as unknown as User).role = UserRole.USER;
+      }
+    }
+
+    typeMap.set(entity.id, entity);
+    this.updateStorage(kind, typeMap);
+    this.saveToLocalStorage();
+  }
+
+  override async batchSave<T extends { id: string }>(kind: string, entities: T[]): Promise<void> {
+    for (const entity of entities) {
+      await this.save(kind, entity);
+    }
+  }
+
+  override async batchDelete(kind: string, ids: string[]): Promise<void> {
+    const typeMap = this.getTypeMap(kind);
+    ids.forEach(id => typeMap.delete(id));
+    this.updateStorage(kind, typeMap);
     this.saveToLocalStorage();
   }
 }

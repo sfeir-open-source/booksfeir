@@ -1,18 +1,19 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
-import { BookService } from '../../core/services/book.service';
-import { LibraryService } from '../../core/services/library.service';
-import { AuthMockService } from '../../core/services/mock/auth-mock.service';
-import { Book, BookStatus } from '../../core/models/book.model';
-import { Library } from '../../core/models/library.model';
+import {Component, computed, effect, inject, signal} from '@angular/core';
+import {toObservable, toSignal} from '@angular/core/rxjs-interop';
+import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {ActivatedRoute, Router} from '@angular/router';
+import {MatCardModule} from '@angular/material/card';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatInputModule} from '@angular/material/input';
+import {MatButtonModule} from '@angular/material/button';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {MatIconModule} from '@angular/material/icon';
+import {MatSelectModule} from '@angular/material/select';
+import {BookService} from '../../core/services/book.service';
+import {LibraryService} from '../../core/services/library.service';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
+import {Library} from '../../core/models/library.model';
+import {catchError, filter, map, of, switchMap} from 'rxjs';
 
 /**
  * BookFormComponent
@@ -30,7 +31,6 @@ import { Library } from '../../core/models/library.model';
  */
 @Component({
   selector: 'sfeir-book-form',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatCardModule,
@@ -42,10 +42,9 @@ import { Library } from '../../core/models/library.model';
     MatSelectModule
   ],
   templateUrl: './book-form.component.html',
-  styleUrl: './book-form.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './book-form.component.scss'
 })
-export class BookFormComponent implements OnInit {
+export class BookFormComponent {
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -54,27 +53,120 @@ export class BookFormComponent implements OnInit {
   private authService = inject(AuthMockService);
 
   form!: FormGroup;
-  isEditMode = signal(false);
   bookId = signal<string | null>(null);
   libraryId = signal<string | null>(null);
-  libraries = signal<Library[]>([]);
-  isLoading = signal(false);
-  isSaving = signal(false);
   error = signal<string | null>(null);
+  isSaving = signal(false);
 
-  ngOnInit(): void {
-    this.loadLibraries();
+  // Load libraries using toSignal
+  libraries = toSignal(
+    this.libraryService.getAll().pipe(
+      catchError(() => {
+        this.error.set('Failed to load libraries');
+        return of([]);
+      })
+    ),
+    {initialValue: []}
+  );
+
+  // Load book for editing using toSignal
+  private bookData = toSignal(
+    toObservable(this.bookId).pipe(
+      switchMap(id => {
+        if (!id) {
+          return of({data: null, error: null, loading: false});
+        }
+        return this.bookService.getById(id).pipe(
+          map(book => ({data: book, error: null, loading: false})),
+          catchError(() => of({data: null, error: 'Failed to load book', loading: false}))
+        );
+      })
+    ),
+    {initialValue: {data: null, error: null, loading: false}}
+  );
+
+  // Save trigger for form submission
+  private saveTrigger = signal<{ action: 'create' | 'update'; data: any } | null>(null);
+
+  // Handle save operation with signals
+  private saveResult = toSignal(
+    toObservable(this.saveTrigger).pipe(
+      filter(trigger => trigger !== null),
+      switchMap(trigger => {
+        if (trigger!.action === 'update') {
+          const id = this.bookId();
+          if (!id) {
+            return of({success: false, error: 'No book ID for update', navigateTo: null});
+          }
+          return this.bookService.update(id, trigger!.data).pipe(
+            map(() => ({success: true, error: null, navigateTo: `/library/${this.libraryId()}`})),
+            catchError(() => of({success: false, error: 'Failed to update book', navigateTo: null}))
+          );
+        } else {
+          const {libraryId, ...bookData} = trigger!.data;
+          const currentUser = this.authService.currentUser();
+          return this.bookService.create(libraryId, {...bookData, addedBy: currentUser?.id}).pipe(
+            map(() => ({success: true, error: null, navigateTo: `/library/${libraryId}`})),
+            catchError(() => of({success: false, error: 'Failed to create book', navigateTo: null}))
+          );
+        }
+      })
+    ),
+    {initialValue: {success: false, error: null, navigateTo: '/'}}
+  );
+
+  // Computed signals
+  isEditMode = computed(() => this.bookId() !== null);
+  isLoading = computed(() => this.bookData()?.loading || false);
+
+  // Writable signals for form state
+
+  constructor() {
+    // Initialize form once
     this.initializeForm();
     this.checkEditMode();
-  }
 
-  private loadLibraries(): void {
-    this.libraryService.getAll().subscribe({
-      next: (libraries) => {
-        this.libraries.set(libraries);
-      },
-      error: (err) => {
-        this.error.set('Failed to load libraries');
+    // Update form when book data changes
+    effect(() => {
+      const bookDataResult = this.bookData();
+      if (bookDataResult?.error) {
+        this.error.set(bookDataResult.error);
+        return;
+      }
+      const book = bookDataResult?.data;
+      if (book === null && this.bookId()) {
+        this.error.set('Book not found');
+        return;
+      }
+      if (book && this.form) {
+        this.libraryId.set(book.libraryId);
+        this.form.patchValue({
+          libraryId: book.libraryId,
+          title: book.title,
+          author: book.author,
+          edition: book.edition || '',
+          publicationDate: book.publicationDate || '',
+          isbn: book.isbn || '',
+          coverImage: book.coverImage || ''
+        });
+        // Disable library selection in edit mode
+        this.form.get('libraryId')?.disable();
+      }
+    });
+
+    // Effect to handle save result
+    effect(() => {
+      const result = this.saveResult();
+      if (result?.success && result.navigateTo) {
+        this.isSaving.set(false);
+        this.router.navigate([result.navigateTo]);
+        // Reset trigger
+        this.saveTrigger.set(null);
+      } else if (result?.error) {
+        this.error.set(result.error);
+        this.isSaving.set(false);
+        // Reset trigger
+        this.saveTrigger.set(null);
       }
     });
   }
@@ -99,44 +191,9 @@ export class BookFormComponent implements OnInit {
 
   private checkEditMode(): void {
     const id = this.route.snapshot.paramMap.get('id');
-
     if (id) {
-      this.isEditMode.set(true);
       this.bookId.set(id);
-      this.loadBook(id);
     }
-  }
-
-  private loadBook(id: string): void {
-    this.isLoading.set(true);
-    this.error.set(null);
-
-    this.bookService.getById(id).subscribe({
-      next: (book) => {
-        if (book) {
-          this.libraryId.set(book.libraryId);
-          this.form.patchValue({
-            libraryId: book.libraryId,
-            title: book.title,
-            author: book.author,
-            edition: book.edition || '',
-            publicationDate: book.publicationDate || '',
-            isbn: book.isbn || '',
-            coverImage: book.coverImage || ''
-          });
-
-          // Disable library selection in edit mode
-          this.form.get('libraryId')?.disable();
-        } else {
-          this.error.set('Book not found');
-        }
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        this.error.set('Failed to load book');
-        this.isLoading.set(false);
-      }
-    });
   }
 
   onSubmit(): void {
@@ -145,48 +202,33 @@ export class BookFormComponent implements OnInit {
       return;
     }
 
+    const currentUser = this.authService.currentUser();
+    if (!currentUser) {
+      this.error.set('You must be logged in to perform this action');
+      return;
+    }
+
     this.isSaving.set(true);
     this.error.set(null);
 
     const formValue = this.form.getRawValue(); // getRawValue() includes disabled fields
-    const currentUser = this.authService.currentUser();
 
-    if (!currentUser) {
-      this.error.set('You must be logged in to perform this action');
-      this.isSaving.set(false);
-      return;
-    }
-
-    if (this.isEditMode()) {
-      const id = this.bookId();
-      if (id) {
-        this.bookService.update(id, formValue).subscribe({
-          next: () => {
-            this.isSaving.set(false);
-            const libId = this.libraryId();
-            this.router.navigate(['/library', libId]);
-          },
-          error: (err) => {
-            this.error.set('Failed to update book');
-            this.isSaving.set(false);
-          }
-        });
-      }
-    } else {
-      const { libraryId, ...bookData } = formValue;
-      this.bookService.create(libraryId, {
-        ...bookData,
-        addedBy: currentUser.id
-      }).subscribe({
-        next: () => {
-          this.isSaving.set(false);
-          this.router.navigate(['/library', libraryId]);
-        },
-        error: (err) => {
-          this.error.set('Failed to create book');
-          this.isSaving.set(false);
+    // Filter out empty optional fields for create mode
+    const cleanedData: any = {...formValue};
+    if (!this.isEditMode()) {
+      const optionalFields = ['edition', 'publicationDate', 'isbn', 'coverImage'];
+      optionalFields.forEach(field => {
+        if (!cleanedData[field]) {
+          delete cleanedData[field];
         }
       });
+    }
+
+    // Trigger save operation via signal
+    if (this.isEditMode()) {
+      this.saveTrigger.set({action: 'update', data: formValue});
+    } else {
+      this.saveTrigger.set({action: 'create', data: cleanedData});
     }
   }
 

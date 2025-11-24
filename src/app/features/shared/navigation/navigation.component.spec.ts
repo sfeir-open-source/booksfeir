@@ -1,23 +1,33 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { NavigationComponent } from './navigation.component';
-import { AuthMockService } from '../../../core/services/mock/auth-mock.service';
-import { By } from '@angular/platform-browser';
-import { DebugElement } from '@angular/core';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection, signal} from '@angular/core';
+import {provideRouter} from '@angular/router';
+import {NavigationComponent} from './navigation.component';
+import {AuthMockService} from '../../../core/services/mock/auth-mock.service';
+import {By} from '@angular/platform-browser';
+import {vi} from 'vitest';
 
 describe('NavigationComponent', () => {
   let component: NavigationComponent;
   let fixture: ComponentFixture<NavigationComponent>;
-  let authMock: jasmine.SpyObj<AuthMockService>;
+  let authMock: any;
+  let userSignal: any;
 
   beforeEach(async () => {
-    const authSpyObj = jasmine.createSpyObj('AuthMockService', ['currentUser']);
-    authSpyObj.currentUser = jasmine.createSpy().and.returnValue({
+    // Create a writable signal for the mock user that can be updated in tests
+    userSignal = signal({
       id: 'test-user',
       name: 'Test User',
       email: 'test@example.com',
       avatar: 'https://example.com/avatar.jpg'
+    });
+
+    const authSpyObj = {
+      getUserId: vi.fn()
+    };
+    // currentUser is a readonly signal, not a method
+    Object.defineProperty(authSpyObj, 'currentUser', {
+      get: () => userSignal.asReadonly(),
+      configurable: true
     });
 
     await TestBed.configureTestingModule({
@@ -29,7 +39,7 @@ describe('NavigationComponent', () => {
       ]
     }).compileComponents();
 
-    authMock = TestBed.inject(AuthMockService) as jasmine.SpyObj<AuthMockService>;
+    authMock = TestBed.inject(AuthMockService) as any;
     fixture = TestBed.createComponent(NavigationComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -99,36 +109,31 @@ describe('NavigationComponent', () => {
     });
 
     it('should display user avatar when available', () => {
-      const avatar = fixture.debugElement.query(By.css('.user-avatar'));
+      const avatar = fixture.debugElement.query(By.css('img[matListItemAvatar]'));
       expect(avatar).toBeTruthy();
       expect(avatar.nativeElement.src).toContain('https://example.com/avatar.jpg');
-      expect(avatar.nativeElement.alt).toBe('Test User');
+      expect(avatar.nativeElement.alt).toBe('Test User avatar');
     });
 
     it('should display default icon when avatar not available', () => {
-      // Recreate with user without avatar
-      const userSignal = signal({
+      // Update the user signal to remove avatar
+      userSignal.set({
         id: 'test-user',
         name: 'Test User',
         email: 'test@example.com'
-      });
-      Object.defineProperty(authMock, 'currentUser', {
-        get: () => userSignal.asReadonly()
       });
 
       fixture = TestBed.createComponent(NavigationComponent);
       fixture.detectChanges();
 
-      const defaultIcon = fixture.debugElement.query(By.css('.user-avatar-icon'));
-      expect(defaultIcon).toBeTruthy();
-      expect(defaultIcon.nativeElement.textContent).toBe('account_circle');
+      const placeholder = fixture.debugElement.query(By.css('.avatar-placeholder'));
+      expect(placeholder).toBeTruthy();
+      expect(placeholder.nativeElement.textContent.trim()).toBe('TU');
     });
 
     it('should not display user section when no user is logged in', () => {
-      const userSignal = signal(null);
-      Object.defineProperty(authMock, 'currentUser', {
-        get: () => userSignal.asReadonly()
-      });
+      // Update the user signal to null
+      userSignal.set(null);
 
       fixture = TestBed.createComponent(NavigationComponent);
       fixture.detectChanges();
@@ -175,8 +180,9 @@ describe('NavigationComponent', () => {
     });
 
     it('should have alt text for user avatar when present', () => {
-      const avatar = fixture.debugElement.query(By.css('.user-avatar'));
-      expect(avatar.nativeElement.alt).toBe('Test User');
+      const avatar = fixture.debugElement.query(By.css('img[matListItemAvatar]'));
+      expect(avatar).toBeTruthy();
+      expect(avatar.nativeElement.alt).toBe('Test User avatar');
     });
 
     it('should use semantic nav element for navigation menu', () => {

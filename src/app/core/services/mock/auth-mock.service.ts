@@ -1,6 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { User, UserRole } from '../../models/user.model';
+import {computed, Injectable, signal} from '@angular/core';
+import {Observable, of} from 'rxjs';
+import {User, UserRole} from '../../models/user.model';
 
 /**
  * AuthMockService
@@ -19,14 +19,35 @@ export class AuthMockService {
     id: 'mock-user-1',
     name: 'Demo User',
     email: 'demo@booksfeir.com',
-    avatar: '/assets/default-avatar.png',
     role: UserRole.USER,
     createdAt: new Date('2025-01-01'),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    updatedBy: 'system'
+  };
+  private readonly MOCK_ADMIN: User = {
+    id: 'admin1',
+    name: 'Admin User',
+    email: 'admin@booksfeir.com',
+    role: UserRole.ADMIN,
+    createdAt: new Date('2025-01-01'),
+    updatedAt: new Date(),
+    updatedBy: 'system'
   };
 
+  private readonly MOCK_LIBRARIAN: User = {
+    id: 'lib1',
+    name: 'Library Manager',
+    email: 'librarian@booksfeir.com',
+    role: UserRole.LIBRARIAN,
+    createdAt: new Date('2025-01-01'),
+    updatedAt: new Date(),
+    updatedBy: 'system'
+  };
+
+  private readonly MOCK_CURRENT_USER = this.MOCK_ADMIN
+
   // Signal for current user (reactive state)
-  private currentUserSignal = signal<User | null>(this.MOCK_USER);
+  private currentUserSignal = signal<User | null>(this.MOCK_CURRENT_USER);
 
   // Public readonly current user
   currentUser = this.currentUserSignal.asReadonly();
@@ -37,6 +58,7 @@ export class AuthMockService {
   // Computed: Is user an admin?
   isAdmin = computed(() => this.currentUser()?.role === UserRole.ADMIN);
 
+  rigthOfManage = computed(() => this.isAuthenticated() && this.currentUser()?.role !== UserRole.USER);
   /**
    * Get current user as Observable (for compatibility with services expecting Observables)
    */
@@ -56,8 +78,8 @@ export class AuthMockService {
    */
   login(email: string): Observable<User> {
     // In mock mode, always return the mock user regardless of email
-    this.currentUserSignal.set(this.MOCK_USER);
-    return of(this.MOCK_USER);
+    this.currentUserSignal.set(this.MOCK_CURRENT_USER);
+    return of(this.MOCK_CURRENT_USER);
   }
 
   /**
@@ -86,13 +108,7 @@ export class AuthMockService {
    * Switch to admin user (for testing admin features)
    */
   switchToAdmin(): void {
-    const adminUser: User = {
-      ...this.MOCK_USER,
-      role: UserRole.ADMIN,
-      name: 'Admin User',
-      email: 'admin@booksfeir.com'
-    };
-    this.currentUserSignal.set(adminUser);
+    this.currentUserSignal.set(this.MOCK_ADMIN);
   }
 
   /**

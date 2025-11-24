@@ -1,11 +1,14 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { LibraryService } from '../../core/services/library.service';
-import { Library } from '../../core/models/library.model';
+import {Component, computed, inject, linkedSignal} from '@angular/core';
+import {toSignal} from '@angular/core/rxjs-interop';
+import {RouterLink} from '@angular/router';
+import {MatCardModule} from '@angular/material/card';
+import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {catchError, of, startWith, Subject, switchMap} from 'rxjs';
+import {LibraryService} from '../../core/services/library.service';
+import {Library} from '../../core/models/library.model';
+import {AuthMockService} from '../../core/services/mock/auth-mock.service';
 
 /**
  * HomeComponent
@@ -22,7 +25,6 @@ import { Library } from '../../core/models/library.model';
  */
 @Component({
   selector: 'sfeir-home',
-  standalone: true,
   imports: [
     RouterLink,
     MatCardModule,
@@ -31,33 +33,39 @@ import { Library } from '../../core/models/library.model';
     MatProgressSpinnerModule
   ],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './home.component.scss'
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent {
   private libraryService = inject(LibraryService);
+  private authService = inject(AuthMockService);
 
   // Signal for libraries list
-  libraries = this.libraryService.libraries;
+  libraries = linkedSignal(this.libraryService.libraries);
 
-  // Loading state
-  isLoading = signal(true);
+  // User authentication state
+  rigthOfManage = this.authService.rigthOfManage;
 
-  ngOnInit(): void {
-    this.loadLibraries();
-  }
+  // Subject to trigger library loading
+  private loadLibrariesTrigger$ = new Subject<void>();
 
-  private loadLibraries(): void {
-    this.isLoading.set(true);
-    this.libraryService.getAll().subscribe({
-      next: () => {
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        this.isLoading.set(false);
-      }
-    });
-  }
+  // Observable stream for loading libraries
+  private librariesLoad$ = this.loadLibrariesTrigger$.pipe(
+    startWith(undefined), // Trigger initial load
+    switchMap(() =>
+      this.libraryService.getAll().pipe(
+        catchError(error => {
+          console.error('Failed to load libraries:', error);
+          return of(undefined);
+        })
+      )
+    )
+  );
+
+  // Convert to signal for automatic subscription management
+  private librariesLoadStatus = toSignal(this.librariesLoad$);
+
+  // Loading state derived from libraries load status
+  isLoading = computed(() => this.librariesLoadStatus() === undefined && this.libraries().length === 0);
 
   /**
    * Track by function for @for loop optimization

@@ -1,7 +1,7 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import {inject, Injectable} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {Observable, of} from 'rxjs';
+import {catchError, map} from 'rxjs/operators';
 
 /**
  * Google Books API Response Types
@@ -68,12 +68,13 @@ export class GoogleBooksService {
    * @param maxResults Maximum number of results (default: 20)
    */
   search(query: string, maxResults: number = 20): Observable<GoogleBookResult[]> {
-    if (!query || query.trim().length === 0) {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery || trimmedQuery.length === 0) {
       return of([]);
     }
 
     const params = {
-      q: query.trim(),
+      q: trimmedQuery + "+subject:Computers",
       maxResults: maxResults.toString()
     };
 

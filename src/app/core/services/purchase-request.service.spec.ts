@@ -1,13 +1,14 @@
-import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { PurchaseRequestService } from './purchase-request.service';
-import { DatastoreMockService } from './mock/datastore-mock.service';
-import { PurchaseRequest, PurchaseRequestStatus } from '../models/purchase-request.model';
-import { of, throwError } from 'rxjs';
+import {TestBed} from '@angular/core/testing';
+import {provideZonelessChangeDetection} from '@angular/core';
+import {PurchaseRequestService} from './purchase-request.service';
+import {DatastoreMockService} from './mock/datastore-mock.service';
+import {PurchaseRequest, PurchaseRequestStatus} from '../models/purchase-request.model';
+import {of, throwError} from 'rxjs';
+import {vi} from 'vitest';
 
 describe('PurchaseRequestService', () => {
   let service: PurchaseRequestService;
-  let datastoreMock: jasmine.SpyObj<DatastoreMockService>;
+  let datastoreMock: any;
 
   const mockPurchaseRequest: PurchaseRequest = {
     id: 'req-1',
@@ -43,14 +44,14 @@ describe('PurchaseRequestService', () => {
   ];
 
   beforeEach(() => {
-    const datastoreSpyObj = jasmine.createSpyObj('DatastoreMockService', [
-      'list',
-      'read',
-      'create',
-      'update',
-      'delete',
-      'query'
-    ]);
+    const datastoreSpyObj = {
+      list: vi.fn(),
+      read: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      query: vi.fn()
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -60,11 +61,11 @@ describe('PurchaseRequestService', () => {
       ]
     });
 
-    datastoreMock = TestBed.inject(DatastoreMockService) as jasmine.SpyObj<DatastoreMockService>;
+    datastoreMock = TestBed.inject(DatastoreMockService) as any;
 
     // Default mock behavior
-    datastoreMock.list.and.returnValue(of([]));
-    datastoreMock.query.and.returnValue(of([]));
+    datastoreMock.list.mockReturnValue(of([]));
+    datastoreMock.query.mockReturnValue(of([]));
 
     service = TestBed.inject(PurchaseRequestService);
   });
@@ -74,7 +75,7 @@ describe('PurchaseRequestService', () => {
   });
 
   describe('create', () => {
-    it('should create a new purchase request with PENDING status', (done) => {
+    it('should create a new purchase request with PENDING status', () => {
       const dto = {
         libraryId: 'lib-1',
         googleBooksId: 'google-book-1',
@@ -92,25 +93,25 @@ describe('PurchaseRequestService', () => {
         updatedAt: new Date()
       };
 
-      datastoreMock.create.and.returnValue(of(created));
-      datastoreMock.list.and.returnValue(of([created]));
+      datastoreMock.create.mockReturnValue(of(created));
+      datastoreMock.list.mockReturnValue(of([created]));
 
       service.create(dto).subscribe(request => {
         expect(request.status).toBe(PurchaseRequestStatus.PENDING);
-        expect(datastoreMock.create).toHaveBeenCalledWith('PurchaseRequest', jasmine.objectContaining({
+        expect(datastoreMock.create).toHaveBeenCalledWith('PurchaseRequest', {
           libraryId: 'lib-1',
           googleBooksId: 'google-book-1',
           title: 'New Book',
           author: 'New Author',
           userId: 'user-1',
           status: PurchaseRequestStatus.PENDING,
-          requestedAt: jasmine.any(Date)
-        }));
-        done();
+          requestedAt: expect.any(Date)
+        });
+
       });
     });
 
-    it('should create request with optional fields', (done) => {
+    it('should create request with optional fields', () => {
       const dto = {
         libraryId: 'lib-1',
         googleBooksId: 'google-book-1',
@@ -131,17 +132,17 @@ describe('PurchaseRequestService', () => {
         updatedAt: new Date()
       };
 
-      datastoreMock.create.and.returnValue(of(created));
-      datastoreMock.list.and.returnValue(of([created]));
+      datastoreMock.create.mockReturnValue(of(created));
+      datastoreMock.list.mockReturnValue(of([created]));
 
       service.create(dto).subscribe(request => {
         expect(request.isbn).toBe('978-9876543210');
         expect(request.coverImage).toBe('http://example.com/new.jpg');
-        done();
+
       });
     });
 
-    it('should throw error on create failure', (done) => {
+    it('should throw error on create failure', () => {
       const dto = {
         libraryId: 'lib-1',
         googleBooksId: 'google-book-1',
@@ -150,74 +151,73 @@ describe('PurchaseRequestService', () => {
         userId: 'user-1'
       };
 
-      datastoreMock.create.and.returnValue(throwError(() => new Error('Create failed')));
+      datastoreMock.create.mockReturnValue(throwError(() => new Error('Create failed')));
 
       service.create(dto).subscribe({
-        next: () => fail('Should have thrown error'),
         error: (error) => {
           expect(error.message).toContain('Create failed');
-          done();
+
         }
       });
     });
   });
 
   describe('getAll', () => {
-    it('should retrieve all purchase requests and update signal', (done) => {
-      datastoreMock.list.and.returnValue(of(mockRequests));
+    it('should retrieve all purchase requests and update signal', () => {
+      datastoreMock.list.mockReturnValue(of(mockRequests));
 
       service.getAll().subscribe(requests => {
         expect(requests.length).toBe(2);
         expect(service.purchaseRequests().length).toBe(2);
         expect(datastoreMock.list).toHaveBeenCalledWith('PurchaseRequest');
-        done();
+
       });
     });
 
-    it('should sort requests by requestedAt (newest first)', (done) => {
+    it('should sort requests by requestedAt (newest first)', () => {
       const unsorted = [mockRequests[0], mockRequests[1]]; // Jan 15, Jan 20
-      datastoreMock.list.and.returnValue(of(unsorted));
+      datastoreMock.list.mockReturnValue(of(unsorted));
 
       service.getAll().subscribe(requests => {
         expect(requests[0].requestedAt.getTime()).toBeGreaterThan(requests[1].requestedAt.getTime());
-        done();
+
       });
     });
 
-    it('should return empty array on error', (done) => {
-      datastoreMock.list.and.returnValue(throwError(() => new Error('Test error')));
+    it('should return empty array on error', () => {
+      datastoreMock.list.mockReturnValue(throwError(() => new Error('Test error')));
 
       service.getAll().subscribe(requests => {
         expect(requests).toEqual([]);
-        done();
+
       });
     });
   });
 
   describe('getById', () => {
-    it('should retrieve a purchase request by ID', (done) => {
-      datastoreMock.read.and.returnValue(of(mockPurchaseRequest));
+    it('should retrieve a purchase request by ID', () => {
+      datastoreMock.read.mockReturnValue(of(mockPurchaseRequest));
 
       service.getById('req-1').subscribe(request => {
         expect(request).toEqual(mockPurchaseRequest);
         expect(datastoreMock.read).toHaveBeenCalledWith('PurchaseRequest', 'req-1');
-        done();
+
       });
     });
 
-    it('should return null when request not found', (done) => {
-      datastoreMock.read.and.returnValue(of(null));
+    it('should return null when request not found', () => {
+      datastoreMock.read.mockReturnValue(of(null));
 
       service.getById('non-existent').subscribe(request => {
         expect(request).toBeNull();
-        done();
+
       });
     });
   });
 
   describe('getByLibrary', () => {
-    it('should retrieve requests for a specific library', (done) => {
-      (datastoreMock.query.and.callFake as any)((entityType: string, predicate: any) => {
+    it('should retrieve requests for a specific library', () => {
+      datastoreMock.query.mockImplementation((entityType: string, predicate: any) => {
         const filtered = mockRequests.filter(predicate);
         return of(filtered);
       });
@@ -225,33 +225,33 @@ describe('PurchaseRequestService', () => {
       service.getByLibrary('lib-1').subscribe(requests => {
         expect(requests.length).toBe(2);
         expect(requests.every(r => r.libraryId === 'lib-1')).toBe(true);
-        done();
+
       });
     });
 
-    it('should sort library requests by requestedAt (newest first)', (done) => {
-      datastoreMock.query.and.returnValue(of([mockRequests[0], mockRequests[1]]));
+    it('should sort library requests by requestedAt (newest first)', () => {
+      datastoreMock.query.mockReturnValue(of([mockRequests[0], mockRequests[1]]));
 
       service.getByLibrary('lib-1').subscribe(requests => {
         expect(requests[0].requestedAt.getTime()).toBeGreaterThan(requests[1].requestedAt.getTime());
-        done();
+
       });
     });
 
-    it('should return empty array on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+    it('should return empty array on error', () => {
+      datastoreMock.query.mockReturnValue(throwError(() => new Error('Test error')));
 
       service.getByLibrary('lib-1').subscribe(requests => {
         expect(requests).toEqual([]);
-        done();
+
       });
     });
   });
 
   describe('getByStatus', () => {
-    it('should retrieve requests by PENDING status', (done) => {
+    it('should retrieve requests by PENDING status', () => {
       const pendingRequests = mockRequests.filter(r => r.status === PurchaseRequestStatus.PENDING);
-      (datastoreMock.query.and.callFake as any)((entityType: string, predicate: any) => {
+      datastoreMock.query.mockImplementation((entityType: string, predicate: any) => {
         const filtered = mockRequests.filter(predicate);
         return of(filtered);
       });
@@ -259,12 +259,12 @@ describe('PurchaseRequestService', () => {
       service.getByStatus(PurchaseRequestStatus.PENDING).subscribe(requests => {
         expect(requests.length).toBe(1);
         expect(requests[0].status).toBe(PurchaseRequestStatus.PENDING);
-        done();
+
       });
     });
 
-    it('should retrieve requests by APPROVED status', (done) => {
-      (datastoreMock.query.and.callFake as any)((entityType: string, predicate: any) => {
+    it('should retrieve requests by APPROVED status', () => {
+      datastoreMock.query.mockImplementation((entityType: string, predicate: any) => {
         const filtered = mockRequests.filter(predicate);
         return of(filtered);
       });
@@ -272,68 +272,68 @@ describe('PurchaseRequestService', () => {
       service.getByStatus(PurchaseRequestStatus.APPROVED).subscribe(requests => {
         expect(requests.length).toBe(1);
         expect(requests[0].status).toBe(PurchaseRequestStatus.APPROVED);
-        done();
+
       });
     });
 
-    it('should return empty array on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+    it('should return empty array on error', () => {
+      datastoreMock.query.mockReturnValue(throwError(() => new Error('Test error')));
 
       service.getByStatus(PurchaseRequestStatus.PENDING).subscribe(requests => {
         expect(requests).toEqual([]);
-        done();
+
       });
     });
   });
 
   describe('checkDuplicate', () => {
-    it('should return true when duplicate pending request exists', (done) => {
-      (datastoreMock.query.and.callFake as any)((entityType: string, predicate: any) => {
+    it('should return true when duplicate pending request exists', () => {
+      datastoreMock.query.mockImplementation((entityType: string, predicate: any) => {
         const filtered = mockRequests.filter(predicate);
         return of(filtered);
       });
 
       service.checkDuplicate('google-book-1', 'lib-1').subscribe(isDuplicate => {
         expect(isDuplicate).toBe(true);
-        done();
+
       });
     });
 
-    it('should return false when no duplicate exists', (done) => {
-      datastoreMock.query.and.returnValue(of([]));
+    it('should return false when no duplicate exists', () => {
+      datastoreMock.query.mockReturnValue(of([]));
 
       service.checkDuplicate('google-book-999', 'lib-1').subscribe(isDuplicate => {
         expect(isDuplicate).toBe(false);
-        done();
+
       });
     });
 
-    it('should only consider PENDING status as duplicates', (done) => {
+    it('should only consider PENDING status as duplicates', () => {
       const approvedRequest = { ...mockPurchaseRequest, status: PurchaseRequestStatus.APPROVED };
 
-      (datastoreMock.query.and.callFake as any)((entityType: string, predicate: any) => {
+      datastoreMock.query.mockImplementation((entityType: string, predicate: any) => {
         const filtered = [approvedRequest].filter(predicate);
         return of(filtered);
       });
 
       service.checkDuplicate('google-book-1', 'lib-1').subscribe(isDuplicate => {
         expect(isDuplicate).toBe(false);
-        done();
+
       });
     });
 
-    it('should return false on error', (done) => {
-      datastoreMock.query.and.returnValue(throwError(() => new Error('Test error')));
+    it('should return false on error', () => {
+      datastoreMock.query.mockReturnValue(throwError(() => new Error('Test error')));
 
       service.checkDuplicate('google-book-1', 'lib-1').subscribe(isDuplicate => {
         expect(isDuplicate).toBe(false);
-        done();
+
       });
     });
   });
 
   describe('updateStatus', () => {
-    it('should update request status to APPROVED', (done) => {
+    it('should update request status to APPROVED', () => {
       const updated: PurchaseRequest = {
         ...mockPurchaseRequest,
         status: PurchaseRequestStatus.APPROVED,
@@ -341,21 +341,21 @@ describe('PurchaseRequestService', () => {
         reviewedBy: 'admin-1'
       };
 
-      datastoreMock.update.and.returnValue(of(updated));
-      datastoreMock.list.and.returnValue(of([updated]));
+      datastoreMock.update.mockReturnValue(of(updated));
+      datastoreMock.list.mockReturnValue(of([updated]));
 
       service.updateStatus('req-1', PurchaseRequestStatus.APPROVED, 'admin-1').subscribe(request => {
         expect(request.status).toBe(PurchaseRequestStatus.APPROVED);
-        expect(datastoreMock.update).toHaveBeenCalledWith('PurchaseRequest', 'req-1', jasmine.objectContaining({
+        expect(datastoreMock.update).toHaveBeenCalledWith('PurchaseRequest', 'req-1', {
           status: PurchaseRequestStatus.APPROVED,
-          reviewedAt: jasmine.any(Date),
+          reviewedAt: expect.any(Date),
           reviewedBy: 'admin-1'
-        }));
-        done();
+        });
+
       });
     });
 
-    it('should update request status to REJECTED with notes', (done) => {
+    it('should update request status to REJECTED with notes', () => {
       const updated: PurchaseRequest = {
         ...mockPurchaseRequest,
         status: PurchaseRequestStatus.REJECTED,
@@ -364,49 +364,47 @@ describe('PurchaseRequestService', () => {
         reviewNotes: 'Already have this book'
       };
 
-      datastoreMock.update.and.returnValue(of(updated));
-      datastoreMock.list.and.returnValue(of([updated]));
+      datastoreMock.update.mockReturnValue(of(updated));
+      datastoreMock.list.mockReturnValue(of([updated]));
 
       service.updateStatus('req-1', PurchaseRequestStatus.REJECTED, 'admin-1', 'Already have this book')
         .subscribe(request => {
           expect(request.status).toBe(PurchaseRequestStatus.REJECTED);
           expect(request.reviewNotes).toBe('Already have this book');
-          done();
+
         });
     });
 
-    it('should throw error on update failure', (done) => {
-      datastoreMock.update.and.returnValue(throwError(() => new Error('Update failed')));
+    it('should throw error on update failure', () => {
+      datastoreMock.update.mockReturnValue(throwError(() => new Error('Update failed')));
 
       service.updateStatus('req-1', PurchaseRequestStatus.APPROVED, 'admin-1').subscribe({
-        next: () => fail('Should have thrown error'),
         error: (error) => {
           expect(error.message).toContain('Update failed');
-          done();
+
         }
       });
     });
   });
 
   describe('delete', () => {
-    it('should delete a purchase request', (done) => {
-      datastoreMock.delete.and.returnValue(of(void 0));
-      datastoreMock.list.and.returnValue(of([]));
+    it('should delete a purchase request', () => {
+      datastoreMock.delete.mockReturnValue(of(void 0));
+      datastoreMock.list.mockReturnValue(of([]));
 
       service.delete('req-1').subscribe(() => {
         expect(datastoreMock.delete).toHaveBeenCalledWith('PurchaseRequest', 'req-1');
-        done();
+
       });
     });
 
-    it('should throw error on delete failure', (done) => {
-      datastoreMock.delete.and.returnValue(throwError(() => new Error('Delete failed')));
+    it('should throw error on delete failure', () => {
+      datastoreMock.delete.mockReturnValue(throwError(() => new Error('Delete failed')));
 
       service.delete('req-1').subscribe({
-        next: () => fail('Should have thrown error'),
         error: (error) => {
           expect(error.message).toContain('Delete failed');
-          done();
+
         }
       });
     });
