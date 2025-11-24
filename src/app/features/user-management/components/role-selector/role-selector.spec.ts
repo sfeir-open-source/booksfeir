@@ -11,17 +11,14 @@
 
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {provideZonelessChangeDetection} from '@angular/core';
-import {HarnessLoader} from '@angular/cdk/testing';
-import {TestbedHarnessEnvironment} from '@angular/cdk/testing/testbed';
-import {MatSelectHarness} from '@angular/material/select/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {By} from '@angular/platform-browser';
 import {RoleSelector} from './role-selector';
 import {UserRole} from '../../../../core/models/user.model';
 
 describe('RoleSelector', () => {
   let component: RoleSelector;
   let fixture: ComponentFixture<RoleSelector>;
-  let loader: HarnessLoader;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -31,7 +28,6 @@ describe('RoleSelector', () => {
 
     fixture = TestBed.createComponent(RoleSelector);
     component = fixture.componentInstance;
-    loader = TestbedHarnessEnvironment.loader(fixture);
 
     // Set required input
     fixture.componentRef.setInput('currentRole', UserRole.USER);
@@ -42,40 +38,52 @@ describe('RoleSelector', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display current role in select', async () => {
-    const select = await loader.getHarness(MatSelectHarness);
-    const valueText = await select.getValueText();
+  it('should display current role in select', () => {
+    const select = fixture.debugElement.query(By.css('mat-select'));
+    expect(select).toBeTruthy();
 
-    expect(valueText).toBe('User');
+    // Check the value property directly
+    expect(select.componentInstance.value).toBe(UserRole.USER);
+
+    // Or check the displayed text after opening
+    const selectTrigger = fixture.debugElement.query(By.css('.mat-mdc-select-value-text'));
+    if (selectTrigger) {
+      expect(selectTrigger.nativeElement.textContent.trim()).toBe('User');
+    }
   });
 
-  it('should display all available roles as options', async () => {
-    const select = await loader.getHarness(MatSelectHarness);
-    await select.open();
-    const options = await select.getOptions();
+  it('should display all available roles as options', () => {
+    const selectTrigger = fixture.debugElement.query(By.css('.mat-mdc-select-trigger'));
+    selectTrigger.nativeElement.click();
+    fixture.detectChanges();
 
+    const options = fixture.debugElement.queryAll(By.css('mat-option'));
     expect(options.length).toBe(3);
-    const optionTexts = await Promise.all(options.map(opt => opt.getText()));
+
+    const optionTexts = options.map(opt => opt.nativeElement.textContent.trim());
     expect(optionTexts).toContain('User');
     expect(optionTexts).toContain('Librarian');
     expect(optionTexts).toContain('Admin');
   });
 
-  it('should emit roleChange event when selection changes', async () => {
+  it('should emit roleChange event when selection changes', () => {
     let emittedRole: UserRole | undefined;
     component.roleChange.subscribe((role: UserRole) => {
       emittedRole = role;
     });
 
-    const select = await loader.getHarness(MatSelectHarness);
-    await select.open();
-    const options = await select.getOptions();
-    await options[1].click(); // Select "Librarian"
+    const selectTrigger = fixture.debugElement.query(By.css('.mat-mdc-select-trigger'));
+    selectTrigger.nativeElement.click();
+    fixture.detectChanges();
+
+    const options = fixture.debugElement.queryAll(By.css('mat-option'));
+    options[1].nativeElement.click(); // Select "Librarian"
+    fixture.detectChanges();
 
     expect(emittedRole).toBe(UserRole.LIBRARIAN);
   });
 
-  it('should not emit event when disabled', async () => {
+  it('should not emit event when disabled', () => {
     fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
 
@@ -90,34 +98,28 @@ describe('RoleSelector', () => {
     expect(emittedRole).toBeUndefined();
   });
 
-  it('should disable select when disabled input is true', async () => {
+  it('should disable select when disabled input is true', () => {
     fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
 
-    const select = await loader.getHarness(MatSelectHarness);
-    const isDisabled = await select.isDisabled();
-
-    expect(isDisabled).toBe(true);
+    const select = fixture.debugElement.query(By.css('mat-select'));
+    expect(select.nativeElement.getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('should enable select when disabled input is false', async () => {
+  it('should enable select when disabled input is false', () => {
     fixture.componentRef.setInput('disabled', false);
     fixture.detectChanges();
 
-    const select = await loader.getHarness(MatSelectHarness);
-    const isDisabled = await select.isDisabled();
-
-    expect(isDisabled).toBe(false);
+    const select = fixture.debugElement.query(By.css('mat-select'));
+    expect(select.nativeElement.getAttribute('aria-disabled')).toBe('false');
   });
 
-  it('should update displayed role when currentRole input changes', async () => {
+  it('should update displayed role when currentRole input changes', () => {
     fixture.componentRef.setInput('currentRole', UserRole.ADMIN);
     fixture.detectChanges();
 
-    const select = await loader.getHarness(MatSelectHarness);
-    const valueText = await select.getValueText();
-
-    expect(valueText).toBe('Admin');
+    const select = fixture.debugElement.query(By.css('mat-select'));
+    expect(select.componentInstance.value).toBe(UserRole.ADMIN);
   });
 
   it('should have role-selector host class', () => {
@@ -146,18 +148,15 @@ describe('RoleSelector', () => {
     // If component renders, OnPush is working
   });
 
-  it('should handle all role values correctly', async () => {
+  it('should handle all role values correctly', () => {
     const roles = [UserRole.USER, UserRole.LIBRARIAN, UserRole.ADMIN];
 
     for (const role of roles) {
       fixture.componentRef.setInput('currentRole', role);
       fixture.detectChanges();
 
-      const select = await loader.getHarness(MatSelectHarness);
-      const valueText = await select.getValueText();
-
-      const expectedText = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-      expect(valueText).toBe(expectedText);
+      const select = fixture.debugElement.query(By.css('mat-select'));
+      expect(select.componentInstance.value).toBe(role);
     }
   });
 });

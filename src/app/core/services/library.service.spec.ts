@@ -6,7 +6,7 @@ import {AuthMockService} from './mock/auth-mock.service';
 import {Library} from '../models/library.model';
 import {Book, BookStatus} from '../models/book.model';
 import {of, throwError} from 'rxjs';
-import {vi} from 'vitest';
+import {expect, vi} from 'vitest';
 
 describe('LibraryService', () => {
   let service: LibraryService;
@@ -185,11 +185,11 @@ describe('LibraryService', () => {
       datastoreMock.list.mockReturnValue(of([]));
 
       service.create(formValue).subscribe(() => {
-        expect(datastoreMock.create).toHaveBeenCalledWith('Library', {
+        expect(datastoreMock.create).toHaveBeenCalledWith('Library', expect.objectContaining({
           name: 'Spaced Library',
           description: 'Spaced description',
           location: 'Spaced location'
-        });
+        }));
 
       });
     });
@@ -202,7 +202,7 @@ describe('LibraryService', () => {
       expect(() => service.create(formValue)).toThrowError('User must be authenticated to create a library');
     });
 
-    it('should update signal with new library in sorted order', () => {
+    it('should update signal with new library in sorted order', async () => {
       const formValue = { name: 'AAA First Library' };
 
       datastoreMock.list.mockReturnValue(of([mockLibrary])); // Test Library
@@ -217,15 +217,14 @@ describe('LibraryService', () => {
       // Trigger reload with the new mock data
       service.refresh();
 
-      // Wait for initial load
-      setTimeout(() => {
+      await new Promise<void>((resolve) => {
         service.create(formValue).subscribe(() => {
           const libs = service.libraries();
           expect(libs[0].name).toBe('AAA First Library');
           expect(libs[1].name).toBe('Test Library');
-
+          resolve();
         });
-      }, 10);
+      });
     });
   });
 

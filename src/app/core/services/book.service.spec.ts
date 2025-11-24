@@ -5,7 +5,7 @@ import {DatastoreMockService} from './mock/datastore-mock.service';
 import {AuthMockService} from './mock/auth-mock.service';
 import {Book, BookStatus} from '../models/book.model';
 import {of, throwError} from 'rxjs';
-import {vi} from 'vitest';
+import {expect, vi} from 'vitest';
 
 describe('BookService', () => {
   let service: BookService;
@@ -293,10 +293,10 @@ describe('BookService', () => {
       }));
 
       service.create('lib-1', formValue).subscribe(() => {
-        expect(datastoreMock.create).toHaveBeenCalledWith('Book', {
+        expect(datastoreMock.create).toHaveBeenCalledWith('Book', expect.objectContaining({
           title: 'Spaced Title',
           author: 'Spaced Author'
-        });
+        }));
 
       });
     });

@@ -1,9 +1,9 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {provideZonelessChangeDetection, signal, WritableSignal} from '@angular/core';
-import {provideRouter, Router} from '@angular/router';
+import {ActivatedRoute, convertToParamMap, provideRouter, Router} from '@angular/router';
 import {Location} from '@angular/common';
 import {By} from '@angular/platform-browser';
-import {of} from 'rxjs';
+import {BehaviorSubject, of} from 'rxjs';
 
 import {HomeComponent} from './home.component';
 import {LibraryDetailComponent} from '../library-detail/library-detail.component';
@@ -295,14 +295,45 @@ describe('User Story 1 - View and Navigate Library Collection (Integration)', ()
     it('should handle library not found gracefully', async () => {
       libraryServiceMock.getById.mockReturnValue(of(null));
 
+      // Create a BehaviorSubject for paramMap to allow observable-based route params
+      const paramMapSubject = new BehaviorSubject(convertToParamMap({id: 'non-existent'}));
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [HomeComponent, LibraryDetailComponent],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([
+            {path: '', component: HomeComponent},
+            {path: 'library/:id', component: LibraryDetailComponent}
+          ]),
+          {provide: LibraryService, useValue: libraryServiceMock},
+          {provide: BookService, useValue: bookServiceMock},
+          {provide: BorrowService, useValue: borrowServiceMock},
+          {provide: AuthMockService, useValue: authServiceMock},
+          {provide: MatDialog, useValue: dialogMock},
+          {
+            provide: ActivatedRoute,
+            useValue: {
+              paramMap: paramMapSubject.asObservable(),
+              snapshot: {
+                paramMap: convertToParamMap({id: 'non-existent'})
+              }
+            }
+          }
+        ]
+      }).compileComponents();
+
       await router.navigate(['/library/non-existent']);
       const detailFixture = TestBed.createComponent(LibraryDetailComponent);
-      detailFixture.detectChanges();
-      await detailFixture.whenStable();
+
+      // Wait for toSignal to subscribe and observable to emit
+      await new Promise(resolve => setTimeout(resolve, 0));
       detailFixture.detectChanges();
 
       const errorState = detailFixture.debugElement.query(By.css('.error-state'));
       expect(errorState).toBeTruthy();
+      expect(errorState.nativeElement.textContent).toContain('Library not found');
     });
 
     it('should display empty state when no libraries exist', async () => {

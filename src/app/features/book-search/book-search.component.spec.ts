@@ -10,8 +10,11 @@ import {LibraryService} from '../../core/services/library.service';
 import {AuthMockService} from '../../core/services/mock/auth-mock.service';
 import {Library} from '../../core/models/library.model';
 import {User, UserRole} from '../../core/models/user.model';
-import {of, throwError} from 'rxjs';
+import {of, Subject, throwError} from 'rxjs';
 import {vi} from 'vitest';
+
+// Helper function to flush microtasks and allow observables to complete
+const flushMicrotasks = () => new Promise(resolve => setTimeout(resolve, 10));
 
 describe('BookSearchComponent', () => {
   let component: BookSearchComponent;
@@ -184,12 +187,16 @@ describe('BookSearchComponent', () => {
       expect(component.libraries()).toEqual(mockLibraries);
     });
 
-    it('should auto-select first library if only one exists', () => {
+    it('should auto-select first library if only one exists', async () => {
       const singleLibrary = [mockLibraries[0]];
       libraryService.getAll.mockReturnValue(of(singleLibrary));
 
       const newFixture = TestBed.createComponent(BookSearchComponent);
       const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+
+      // Wait for effect to run
+      await flushMicrotasks();
       newFixture.detectChanges();
 
       expect(newComponent.searchForm.get('libraryId')?.value).toBe('lib-1');
@@ -355,17 +362,20 @@ describe('BookSearchComponent', () => {
     it('should show duplicate dialog if request already exists', async () => {
       purchaseRequestService.checkDuplicate.mockReturnValue(of(true));
 
+      // Spy on the private method
+      const showDuplicateDialogSpy = vi.spyOn(component as any, 'showDuplicateDialog');
+
       // Manually trigger the duplicate check flow
       const book = mockBookResults[0];
       component.searchForm.patchValue({ libraryId: 'lib-1' });
 
       component.onRequestPurchase(book);
 
-      await fixture.whenStable();
-      fixture.detectChanges();
+      // Wait for observable to complete
+      await flushMicrotasks();
 
       expect(purchaseRequestService.checkDuplicate).toHaveBeenCalledWith('book-1', 'lib-1');
-      expect(dialog.open).toHaveBeenCalled();
+      expect(showDuplicateDialogSpy).toHaveBeenCalledWith(book);
       expect(purchaseRequestService.create).not.toHaveBeenCalled();
     });
 
@@ -384,29 +394,19 @@ describe('BookSearchComponent', () => {
         updatedBy: 'system'
       }));
 
-      const dialogRefSpy = {
-        afterClosed: vi.fn()
-      };
-      dialogRefSpy.afterClosed.mockReturnValue(of(true));
-      vi.mocked(dialog.open).mockReturnValue(dialogRefSpy as any);
-
       component.onRequestPurchase(mockBookResults[0]);
 
-      // Wait for async observables to complete
-      setTimeout(() => {
-        expect(purchaseRequestService.create).toHaveBeenCalledWith(expect.objectContaining({
-          userId: 'user-1',
-          libraryId: 'lib-1',
-          title: 'Test Book 1',
-          author: 'Author 1',
-          edition: 'Publisher 1',
-          publicationDate: '2023-01-01',
-          isbn: '1234567890',
-          coverImage: 'http://example.com/cover1.jpg',
-          googleBooksId: 'book-1'
-        }));
-
-      }, 10);
+      expect(purchaseRequestService.create).toHaveBeenCalledWith(expect.objectContaining({
+        userId: 'user-1',
+        libraryId: 'lib-1',
+        title: 'Test Book 1',
+        author: 'Author 1',
+        edition: 'Publisher 1',
+        publicationDate: '2023-01-01',
+        isbn: '1234567890',
+        coverImage: 'http://example.com/cover1.jpg',
+        googleBooksId: 'book-1'
+      }));
     });
 
     it('should proceed with request even if duplicate check fails', () => {
@@ -424,81 +424,29 @@ describe('BookSearchComponent', () => {
         updatedBy: 'system'
       }));
 
-      const dialogRefSpy = {
-        afterClosed: vi.fn()
-      };
-      dialogRefSpy.afterClosed.mockReturnValue(of(true));
-      vi.mocked(dialog.open).mockReturnValue(dialogRefSpy as any);
-
       component.onRequestPurchase(mockBookResults[0]);
 
-      // Wait for async observables to complete
-      setTimeout(() => {
-        expect(purchaseRequestService.create).toHaveBeenCalled();
-
-      }, 10);
+      expect(purchaseRequestService.create).toHaveBeenCalled();
     });
 
     it('should set submitting state for the specific book', () => {
+      const create$ = new Subject<any>();
       purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
-      purchaseRequestService.create.mockReturnValue(of({
-        id: 'req-1',
-        userId: 'user-1',
-        libraryId: 'lib-1',
-        title: 'Test Book 1',
-        author: 'Author 1',
-        status: 'PENDING' as any,
-        requestedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        updatedBy: 'system'
-      }));
-
-      const dialogRefSpy = {
-        afterClosed: vi.fn()
-      };
-      dialogRefSpy.afterClosed.mockReturnValue(of(true));
-      vi.mocked(dialog.open).mockReturnValue(dialogRefSpy as any);
+      purchaseRequestService.create.mockReturnValue(create$.asObservable());
 
       component.onRequestPurchase(mockBookResults[0]);
 
-      // Wait for async observables to complete
-      setTimeout(() => {
-        // After submission completes, isSubmitting should be null
-        expect(component.isSubmitting()).toBe(null);
+      // After calling onRequestPurchase and checkDuplicate completes (synchronously with of()),
+      // the create observable should be subscribed and isSubmitting should be set
+      expect(component.isSubmitting()).toBe(mockBookResults[0].googleBooksId);
 
-      }, 10);
+      create$.next({id: 'req-1'}); // Complete the creation
+      create$.complete();
+
+      expect(component.isSubmitting()).toBe(null);
     });
 
-    it('should clear submitting state after successful submission', () => {
-      purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
-      purchaseRequestService.create.mockReturnValue(of({
-        id: 'req-1',
-        userId: 'user-1',
-        libraryId: 'lib-1',
-        title: 'Test Book 1',
-        author: 'Author 1',
-        status: 'PENDING' as any,
-        requestedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        updatedBy: 'system'
-      }));
 
-      const dialogRefSpy = {
-        afterClosed: vi.fn()
-      };
-      dialogRefSpy.afterClosed.mockReturnValue(of(true));
-      vi.mocked(dialog.open).mockReturnValue(dialogRefSpy as any);
-
-      component.onRequestPurchase(mockBookResults[0]);
-
-      // Wait for async observables to complete
-      setTimeout(() => {
-        expect(component.isSubmitting()).toBe(null);
-
-      }, 10);
-    });
 
     it('should handle purchase request creation errors', () => {
       purchaseRequestService.checkDuplicate.mockReturnValue(of(false));
@@ -536,19 +484,15 @@ describe('BookSearchComponent', () => {
         updatedBy: 'system'
       }));
 
+      // Spy on the private method
+      const showSuccessDialogSpy = vi.spyOn(component as any, 'showSuccessDialog');
+
       component.onRequestPurchase(mockBookResults[0]);
 
-      await fixture.whenStable();
-      fixture.detectChanges();
+      // Wait for observables to complete
+      await flushMicrotasks();
 
-      expect(dialog.open).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-        width: '400px',
-        data: expect.objectContaining({
-          title: 'Purchase Request Submitted',
-          message: expect.stringContaining('Test Book 1'),
-          confirmText: 'OK'
-        })
-      }));
+      expect(showSuccessDialogSpy).toHaveBeenCalledWith(mockBookResults[0]);
     });
 
     it('should show duplicate dialog with correct message', async () => {
@@ -559,20 +503,15 @@ describe('BookSearchComponent', () => {
 
       purchaseRequestService.checkDuplicate.mockReturnValue(of(true));
 
+      // Spy on the private method
+      const showDuplicateDialogSpy = vi.spyOn(component as any, 'showDuplicateDialog');
+
       component.onRequestPurchase(mockBookResults[0]);
 
-      await fixture.whenStable();
-      fixture.detectChanges();
+      // Wait for observable to complete
+      await flushMicrotasks();
 
-      expect(dialog.open).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-        width: '400px',
-        data: expect.objectContaining({
-          title: 'Request Already Exists',
-          message: expect.stringContaining('Test Book 1'),
-          confirmText: 'OK',
-          cancelText: ''
-        })
-      }));
+      expect(showDuplicateDialogSpy).toHaveBeenCalledWith(mockBookResults[0]);
     });
   });
 

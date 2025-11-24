@@ -133,7 +133,7 @@ export class BorrowedBooksComponent {
   }
 
   /**
-   * Show return confirmation dialog and handle result with signals
+   * Show return confirmation dialog and handle result
    */
   private showReturnConfirmDialog(transaction: BorrowTransactionWithDetails): void {
     const dialogData: ConfirmDialogData = {
@@ -148,19 +148,13 @@ export class BorrowedBooksComponent {
       data: dialogData
     });
 
-    // Convert dialog result to signal and handle with effect
-    const dialogResult = toSignal(dialogRef.afterClosed(), {initialValue: null});
-
-    effect(
-      () => {
-        const confirmed = dialogResult();
-        if (confirmed === true) {
-          // Trigger the return operation
-          this.returnBookTrigger.set(transaction);
-        }
-      },
-      {allowSignalWrites: true}
-    );
+    // Subscribe to dialog result directly
+    dialogRef.afterClosed().subscribe(confirmed => {
+      if (confirmed === true) {
+        // Trigger the return operation
+        this.returnBookTrigger.set(transaction);
+      }
+    });
   }
 
   /**
@@ -243,7 +237,7 @@ export class BorrowedBooksComponent {
   /**
    * Track by function for @for loop optimization
    */
-  trackByTransactionId(index: number, transaction: BorrowTransactionWithDetails): string {
+  trackByTransactionId(_index: number, transaction: BorrowTransactionWithDetails): string {
     return transaction.id;
   }
 }

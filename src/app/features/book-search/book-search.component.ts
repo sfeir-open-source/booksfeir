@@ -1,4 +1,4 @@
-import {Component, inject, signal} from '@angular/core';
+import {Component, effect, inject, signal} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {MatCardModule} from '@angular/material/card';
@@ -65,18 +65,12 @@ export class BookSearchComponent {
   // Subjects for reactive actions
   private loadLibrariesTrigger$ = new Subject<void>();
   private searchTrigger$ = new Subject<string>();
-  private purchaseRequestTrigger$ = new Subject<{ book: GoogleBookResult; libraryId: string; userId: string }>();
 
   // Observable streams
   private libraries$ = this.loadLibrariesTrigger$.pipe(
     startWith(undefined),
     switchMap(() =>
       this.libraryService.getAll().pipe(
-        tap(libraries => {
-          if (libraries.length === 1) {
-            this.searchForm.patchValue({libraryId: libraries[0].id});
-          }
-        }),
         catchError(error => {
           this.error.set('Failed to load libraries');
           return of([] as Library[]);
@@ -107,37 +101,9 @@ export class BookSearchComponent {
     )
   );
 
-  private purchaseRequest$ = this.purchaseRequestTrigger$.pipe(
-    switchMap(({book, libraryId, userId}) => {
-      this.isSubmitting.set(book.googleBooksId);
-      return this.purchaseRequestService.create({
-        userId,
-        libraryId,
-        title: book.title,
-        author: book.author,
-        edition: book.publisher,
-        publicationDate: book.publicationDate,
-        isbn: book.isbn,
-        coverImage: book.coverImage,
-        googleBooksId: book.googleBooksId
-      }).pipe(
-        tap(() => {
-          this.showSuccessDialog(book);
-          this.isSubmitting.set(null);
-        }),
-        catchError(error => {
-          this.error.set('Failed to submit purchase request');
-          this.isSubmitting.set(null);
-          return of(undefined);
-        })
-      )
-    })
-  );
-
   // Convert to signals
   libraries = toSignal(this.libraries$, {initialValue: [] as Library[]});
   private searchStatus = toSignal(this.searchResults$);
-  private purchaseStatus = toSignal(this.purchaseRequest$);
 
   // Computed states
   isSearching = signal(false);
@@ -145,6 +111,14 @@ export class BookSearchComponent {
 
   constructor() {
     this.initializeForm();
+
+    // Auto-select library if only one exists
+    effect(() => {
+      const libs = this.libraries();
+      if (libs.length === 1) {
+        this.searchForm.patchValue({libraryId: libs[0].id});
+      }
+    });
   }
 
   private initializeForm(): void {
@@ -178,30 +152,49 @@ export class BookSearchComponent {
       return;
     }
 
-    // For duplicate check, we'll use a simpler approach with toSignal
+    this.error.set(null);
+
+    // Check for duplicates first
     if (book.googleBooksId) {
-      this.error.set(null);
-
-      const duplicateCheck$ = this.purchaseRequestService.checkDuplicate(book.googleBooksId, libraryId).pipe(
-        tap(isDuplicate => {
-          if (isDuplicate) {
-            this.showDuplicateDialog(book);
-          } else {
-            this.purchaseRequestTrigger$.next({book, libraryId, userId: currentUser.id});
-          }
-        }),
-        catchError(() => {
-          // Proceed with request even if check fails
-          this.purchaseRequestTrigger$.next({book, libraryId, userId: currentUser.id});
-          return of(false);
-        })
-      );
-
-      // Subscribe to trigger the observable
-      duplicateCheck$.subscribe();
+      this.purchaseRequestService.checkDuplicate(book.googleBooksId, libraryId).pipe(
+        catchError(() => of(false)) // Proceed with request even if check fails
+      ).subscribe(isDuplicate => {
+        if (isDuplicate) {
+          this.showDuplicateDialog(book);
+        } else {
+          this.submitPurchaseRequest(book, libraryId, currentUser.id);
+        }
+      });
     } else {
-      this.purchaseRequestTrigger$.next({book, libraryId, userId: currentUser.id});
+      this.submitPurchaseRequest(book, libraryId, currentUser.id);
     }
+  }
+
+  private submitPurchaseRequest(book: GoogleBookResult, libraryId: string, userId: string): void {
+    this.isSubmitting.set(book.googleBooksId);
+
+    this.purchaseRequestService.create({
+      userId,
+      libraryId,
+      title: book.title,
+      author: book.author,
+      edition: book.publisher,
+      publicationDate: book.publicationDate,
+      isbn: book.isbn,
+      coverImage: book.coverImage,
+      googleBooksId: book.googleBooksId
+    }).pipe(
+      catchError(error => {
+        this.error.set('Failed to submit purchase request');
+        this.isSubmitting.set(null);
+        return of(undefined);
+      })
+    ).subscribe(result => {
+      if (result) {
+        this.showSuccessDialog(book);
+      }
+      this.isSubmitting.set(null);
+    });
   }
 
   private showDuplicateDialog(book: GoogleBookResult): void {

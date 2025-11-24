@@ -114,6 +114,7 @@ As an administrator, I want to see a history of role changes so I can track who 
 - **FR-010**: System MUST apply role changes to users on their next login, meaning changes persist in storage immediately but active sessions continue with their existing permissions until the user logs out and logs back in
 - **FR-011**: System MUST automatically assign the "user" role to all newly created users by default
 - **FR-012**: System MUST retain audit log entries for role changes for 1 month, then automatically delete entries older than 1 month
+- **FR-014**: System MUST maintain active admin session permissions until logout, meaning if an admin is demoted while logged in, they retain admin capabilities until they explicitly log out and log back in
 
 ### Key Entities
 

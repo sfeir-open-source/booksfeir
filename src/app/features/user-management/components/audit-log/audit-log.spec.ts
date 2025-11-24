@@ -18,7 +18,7 @@ import {AuditService} from '../../../../core/services/audit.service';
 import {AuditEntry} from '../../../../core/models/audit-entry.model';
 import {UserRole} from '../../../../core/models/user.model';
 import {expect, vi} from 'vitest';
-import {of} from 'rxjs';
+import {of, throwError} from 'rxjs';
 
 describe('AuditLog', () => {
   let component: AuditLog;
@@ -102,7 +102,7 @@ describe('AuditLog', () => {
   });
 
   it('should show empty state when no entries', async () => {
-    auditService.getAllAuditEntries.mockReturnValue(mockAuditEntries);
+    auditService.getAllAuditEntries$ = vi.fn().mockReturnValue(of([]));
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -191,8 +191,9 @@ describe('AuditLog', () => {
   });
 
   it('should handle audit service errors gracefully', async () => {
-    auditService.getAllAuditEntries.and.rejectWith(new Error('Service error'));
-    vi.spyOn(console, 'error'); // Suppress error log in test
+    auditService.getAllAuditEntries$ = vi.fn().mockReturnValue(throwError(() => new Error('Service error')));
+    vi.spyOn(console, 'error').mockImplementation(() => {
+    }); // Suppress error log in test
 
     fixture.detectChanges();
     await fixture.whenStable();

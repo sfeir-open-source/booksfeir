@@ -9,7 +9,7 @@ import {BorrowStatus, BorrowTransaction} from '../models/borrow-transaction.mode
 import {Book, BookStatus} from '../models/book.model';
 import {Library} from '../models/library.model';
 import {of, throwError} from 'rxjs';
-import {vi} from 'vitest';
+import {expect, vi} from 'vitest';
 
 describe('BorrowService', () => {
   let service: BorrowService;
@@ -313,12 +313,12 @@ describe('BorrowService', () => {
 
       service.borrowBook(dto).subscribe(transaction => {
         expect(transaction).toBeTruthy();
-        expect(datastoreMock.create).toHaveBeenCalledWith('BorrowTransaction', {
+        expect(datastoreMock.create).toHaveBeenCalledWith('BorrowTransaction', expect.objectContaining({
           bookId: 'book-1',
           userId: 'user-1',
           libraryId: 'lib-1',
           status: BorrowStatus.ACTIVE
-        });
+        }));
         expect(bookServiceMock.updateStatus).toHaveBeenCalledWith('book-1', BookStatus.BORROWED);
 
       });

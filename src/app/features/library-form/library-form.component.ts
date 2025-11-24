@@ -148,13 +148,19 @@ export class LibraryFormComponent {
     })
   );
 
-  // Merge all streams and subscribe with toSignal
-  private allStreams$ = merge(this.libraryData$, this.submitResult$);
-  private streamSignal = toSignal(this.allStreams$);
-
   // Computed signals
   libraryId = toSignal(this.libraryId$, {initialValue: null});
   isEditMode = computed(() => this.libraryId() !== null);
+
+  // Merge all streams and subscribe with toSignal
+  // Note: We need to ensure the subscription is active by accessing it in the constructor
+  private allStreams$ = merge(this.libraryData$, this.submitResult$);
+  private streamSignal = toSignal(this.allStreams$);
+
+  constructor() {
+    // Access the signal to ensure the observable subscription is active
+    this.streamSignal();
+  }
 
   onSubmit(): void {
     if (this.form.invalid) {

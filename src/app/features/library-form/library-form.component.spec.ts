@@ -235,7 +235,8 @@ describe('LibraryFormComponent', () => {
       const newComponent = newFixture.componentInstance;
       newFixture.detectChanges();
 
-      // Force an additional change detection cycle for zoneless
+      // Wait for async operations to complete
+      await newFixture.whenStable();
       newFixture.detectChanges();
 
       expect(newComponent.error()).toBe('Library not found');
@@ -283,7 +284,8 @@ describe('LibraryFormComponent', () => {
       const newComponent = newFixture.componentInstance;
       newFixture.detectChanges();
 
-      // Force an additional change detection cycle for zoneless
+      // Wait for async operations to complete
+      await newFixture.whenStable();
       newFixture.detectChanges();
 
       expect(newComponent.error()).toBe('Failed to load library');

@@ -8,7 +8,7 @@
 
 This document contains all implementation tasks for the user role management feature, organized by user story for independent, incremental delivery. Each user story phase is independently testable and delivers user value.
 
-**Total Tasks**: 89
+**Total Tasks**: 95
 **User Stories**: 4 (P1-P3)
 **Parallelization Opportunities**: 21 tasks marked [P]
 
@@ -37,6 +37,10 @@ Each phase is independently deployable and testable.
 
 - [X] T001 Verify Angular 20.x and Angular Material 20.x are installed (check package.json)
 - [X] T002 Verify TypeScript 5.9.x with strict mode is configured (check tsconfig.json)
+- [X] T002a Verify vite.config.ts exists with @analogjs/vite-plugin-angular and Vitest configuration
+- [X] T002b Verify test-setup.ts exists for zoneless TestBed initialization (@analogjs/vitest-angular/setup-snapshots)
+- [X] T002c Verify tsconfig.spec.json includes Vitest global types (vitest/globals)
+- [X] T002d Verify angular.json test builder uses @analogjs/vitest-angular:test
 - [X] T003 Verify zoneless change detection is enabled in src/main.ts (provideExperimentalZonelessChangeDetection)
 - [X] T004 Create core models directory structure: src/app/core/models/
 - [X] T005 Create core services directory structure: src/app/core/services/ and src/app/core/services/mock/
@@ -66,6 +70,7 @@ Each phase is independently deployable and testable.
 - [X] T013 Create abstract DatastoreService class in src/app/core/services/datastore.service.ts with get, query, save, delete, batchSave, batchDelete methods
 - [X] T014 Implement DatastoreMockService in src/app/core/services/mock/datastore-mock.service.ts with in-memory Map storage and seed data (admin1, lib1, user1)
 - [X] T014a Implement default role assignment in DatastoreMockService.save() for User entities (set role = Role.USER if role is undefined)
+- [X] T014b Create unit test for DatastoreMockService.save() validating default USER role assignment for new users without explicit role (validates FR-011)
 - [X] T015 Configure DI provider in src/app/app.config.ts to use DatastoreMockService for development
 
 ### Route Guard
@@ -125,6 +130,7 @@ Each phase is independently deployable and testable.
 - [X] T035 [US1] Verify role change persists in DatastoreMockService
 - [X] T036 [US1] Verify self-modification prevention (role selector disabled for current admin)
 - [X] T036a [US1] Test permission enforcement: verify user role cannot access admin or librarian features
+- [X] T036b [US1] Test admin session persistence: demote active admin → verify they retain admin permissions until logout (validates FR-014)
 
 **Completion Criteria**:
 
@@ -161,14 +167,14 @@ Each phase is independently deployable and testable.
 ### Integration
 
 - [X] T043 [US2] Test librarian role assignment → library assignment → verify LibraryAssignment records created in datastore
-- [X] T044 [US2] Verify changing from librarian to user role preserves LibraryAssignment records (but they're ignored for non-librarians per spec)
+- [X] T044 [US2] Verify changing from librarian to user/admin role preserves LibraryAssignment records in database (they are ignored when user is not a librarian per FR-013)
 
 **Completion Criteria**:
 
 - Admin can assign "librarian" role
 - Admin can assign multiple libraries to librarian
-- Changing role from librarian clears library assignments
-- Tests cover librarian-specific logic
+- Changing role from librarian preserves LibraryAssignment records in database (they are ignored for non-librarian users per FR-013)
+- Tests cover librarian-specific logic including role change preservation
 
 **Dependencies**: Phase 3 (US1)
 
@@ -403,14 +409,14 @@ Track these metrics to validate implementation:
 
 | Phase          | Tasks  | [P] Tasks | User Story | Deliverable                           |
 |----------------|--------|-----------|------------|---------------------------------------|
-| 1 - Setup      | 8      | 0         | -          | Project structure                     |
-| 2 - Foundation | 14     | 7         | -          | Models, services, guards, permissions |
-| 3 - US1 (MVP)  | 21     | 3         | P1         | Basic role assignment ✅               |
+| 1 - Setup      | 12     | 0         | -          | Project structure + Vitest config     |
+| 2 - Foundation | 15     | 7         | -          | Models, services, guards, permissions |
+| 3 - US1 (MVP)  | 22     | 3         | P1         | Basic role assignment ✅               |
 | 4 - US2        | 8      | 0         | P2         | Librarian role + libraries            |
 | 5 - US3        | 8      | 0         | P3         | Admin role delegation                 |
 | 6 - US4        | 12     | 2         | P3         | Audit trail + scheduler               |
 | 7 - Polish     | 18     | 9         | -          | Production-ready                      |
-| **Total**      | **89** | **21**    | **4**      | **Complete feature**                  |
+| **Total**      | **95** | **21**    | **4**      | **Complete feature**                  |
 
 ---
 

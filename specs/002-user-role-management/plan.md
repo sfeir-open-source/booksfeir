@@ -14,7 +14,7 @@ Implement a role-based access control system allowing administrators to assign a
 **Language/Version**: TypeScript 5.9.x with strict mode
 **Primary Dependencies**: Angular 20.x (standalone components, signals), Angular Material 20.x, RxJS 7.x
 **Storage**: GCP Datastore (NoSQL managed database, mocked for local development)
-**Testing**: Karma test runner with Jasmine framework
+**Testing**: Vitest with @analogjs/vitest-angular integration
 **Target Platform**: Web browsers (Chrome, Firefox, Safari, Edge - modern versions)
 **Project Type**: Web application (Angular SPA)
 **Performance Goals**: < 30 seconds for role assignment UI operations (click-to-confirmation round-trip), < 100ms for role lookup/display
