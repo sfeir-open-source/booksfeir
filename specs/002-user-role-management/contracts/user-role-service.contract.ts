@@ -8,7 +8,8 @@
  * Date: 2025-11-19
  */
 
-import {Role} from '../data-model';
+
+import {Role} from '../../../src/app/core/models/role.model';
 
 /**
  * Result of role assignment operation

@@ -288,8 +288,8 @@ Each phase is independently deployable and testable.
 
 - [X] T078 Run `npm run lint` and fix all errors
 - [X] T079 Run `npm run build` and verify no warnings
-- [ ] T080 Test on Chrome, Firefox, Safari, Edge (cross-browser compatibility)
-- [ ] T081 Verify responsive design on mobile, tablet, desktop viewports
+- [X] T080 Test on Chrome, Firefox, Safari, Edge (cross-browser compatibility)
+- [X] T081 Verify responsive design on mobile, tablet, desktop viewports
 
 **Completion Criteria**:
 
