@@ -229,79 +229,87 @@ describe('LibraryService', () => {
   });
 
   describe('update', () => {
-    it('should update a library', () => {
+    it('should update a library', async () => {
       const updates = { name: 'Updated Name', description: 'Updated desc' };
       const updated = { ...mockLibrary, ...updates, updatedAt: new Date() };
 
-      datastoreMock.update.mockReturnValue(of(updated));
       datastoreMock.list.mockReturnValue(of([mockLibrary]));
+      datastoreMock.update.mockReturnValue(of(updated));
 
       // Wait for initial load
-      setTimeout(() => {
-        service.update('lib-1', updates).subscribe(library => {
-          expect(library.name).toBe('Updated Name');
-          expect(datastoreMock.update).toHaveBeenCalledWith('Library', 'lib-1', {
-            name: 'Updated Name',
-            description: 'Updated desc'
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          service.update('lib-1', updates).subscribe(library => {
+            expect(library.name).toBe('Updated Name');
+            expect(datastoreMock.update).toHaveBeenCalledWith('Library', 'lib-1', {
+              name: 'Updated Name',
+              description: 'Updated desc'
+            });
+            resolve();
           });
-
-        });
-      }, 10);
+        }, 10);
+      });
     });
 
-    it('should trim update values', () => {
+    it('should trim update values', async () => {
       const updates = { name: '  Spaced  ' };
       const updated = { ...mockLibrary, name: 'Spaced', updatedAt: new Date() };
 
-      datastoreMock.update.mockReturnValue(of(updated));
       datastoreMock.list.mockReturnValue(of([mockLibrary]));
+      datastoreMock.update.mockReturnValue(of(updated));
 
-      setTimeout(() => {
-        service.update('lib-1', updates).subscribe(() => {
-          expect(datastoreMock.update).toHaveBeenCalledWith('Library', 'lib-1', {
-            name: 'Spaced'
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          service.update('lib-1', updates).subscribe(() => {
+            expect(datastoreMock.update).toHaveBeenCalledWith('Library', 'lib-1', {
+              name: 'Spaced'
+            });
+            resolve();
           });
-
-        });
-      }, 10);
+        }, 10);
+      });
     });
 
-    it('should update signal with updated library', () => {
+    it('should update signal with updated library', async () => {
       const updates = { name: 'Updated Library' };
       const updated = { ...mockLibrary, ...updates, updatedAt: new Date() };
 
-      datastoreMock.update.mockReturnValue(of(updated));
       datastoreMock.list.mockReturnValue(of([mockLibrary]));
+      datastoreMock.update.mockReturnValue(of(updated));
 
       // Trigger reload with the new mock data
       service.refresh();
 
-      setTimeout(() => {
-        service.update('lib-1', updates).subscribe(() => {
-          const libs = service.libraries();
-          expect(libs.find(l => l.id === 'lib-1')?.name).toBe('Updated Library');
-
-        });
-      }, 10);
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          service.update('lib-1', updates).subscribe(() => {
+            const libs = service.libraries();
+            expect(libs.find(l => l.id === 'lib-1')?.name).toBe('Updated Library');
+            resolve();
+          });
+        }, 10);
+      });
     });
   });
 
   describe('delete', () => {
-    it('should delete a library when allowed', () => {
+    it('should delete a library when allowed', async () => {
+      datastoreMock.list.mockReturnValue(of([mockLibrary]));
       datastoreMock.query.mockReturnValue(of([])); // No borrowed books
       datastoreMock.delete.mockReturnValue(of(void 0));
-      datastoreMock.list.mockReturnValue(of([mockLibrary]));
 
-      setTimeout(() => {
-        service.delete('lib-1').subscribe(() => {
-          expect(datastoreMock.delete).toHaveBeenCalledWith('Library', 'lib-1');
-          expect(service.libraries().length).toBe(0);
-
-        });
-      }, 10);
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          service.delete('lib-1').subscribe(() => {
+            expect(datastoreMock.delete).toHaveBeenCalledWith('Library', 'lib-1');
+            expect(service.libraries().length).toBe(0);
+            resolve();
+          });
+        }, 10);
+      });
     });
 
-    it('should throw error when library has borrowed books', () => {
+    it('should throw error when library has borrowed books', async () => {
       const borrowedBook: Book = {
         id: 'book-1',
         libraryId: 'lib-1',
@@ -313,18 +321,20 @@ describe('LibraryService', () => {
         addedBy: 'user-1'
       };
 
-      datastoreMock.query.mockReturnValue(of([borrowedBook]));
       datastoreMock.list.mockReturnValue(of([mockLibrary]));
+      datastoreMock.query.mockReturnValue(of([borrowedBook]));
 
-      setTimeout(() => {
-        service.delete('lib-1').subscribe({
-          error: (error) => {
-            expect(error.message).toContain('Cannot delete library with borrowed books');
-            expect(datastoreMock.delete).not.toHaveBeenCalled();
-
-          }
-        });
-      }, 10);
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          service.delete('lib-1').subscribe({
+            error: (error) => {
+              expect(error.message).toContain('Cannot delete library with borrowed books');
+              expect(datastoreMock.delete).not.toHaveBeenCalled();
+              resolve();
+            }
+          });
+        }, 10);
+      });
     });
   });
 
