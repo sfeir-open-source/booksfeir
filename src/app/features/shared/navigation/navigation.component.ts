@@ -66,6 +66,7 @@ import {MatListItemAvatar} from '@angular/material/list';
         <div class="user-section">
           @if (currentUser(); as user) {
             <div class="user-info">
+              <span class="user-name">{{ user.name }}</span>
               @if (user.avatar) {
                 <img matListItemAvatar [src]="user.avatar" [alt]="user.name + ' avatar'">
               } @else {
@@ -73,7 +74,6 @@ import {MatListItemAvatar} from '@angular/material/list';
                   {{ getInitials(user.name) }}
                 </div>
               }
-              <span class="user-name">{{ user.name }}</span>
             </div>
           }
         </div>
